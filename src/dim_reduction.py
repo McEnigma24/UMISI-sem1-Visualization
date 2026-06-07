@@ -1,4 +1,4 @@
-"""Redukcja wymiaru: UMAP vs PaCMAP na wektorach profili języków."""
+"""Redukcja wymiaru: PCA, UMAP i PaCMAP na wektorach profili jezykow."""
 
 from __future__ import annotations
 
@@ -6,6 +6,7 @@ import numpy as np
 import pacmap
 import pandas as pd
 import umap
+from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 
 from config import PROCESSED_DIM_REDUCTION, PROCESSED_SHARES, RANDOM_SEED
@@ -20,6 +21,8 @@ def load_feature_matrix(shares: pd.DataFrame) -> tuple[np.ndarray, list[str]]:
 
 
 def compute_embeddings(matrix: np.ndarray) -> dict[str, np.ndarray]:
+    pca_emb = PCA(n_components=2, random_state=RANDOM_SEED).fit_transform(matrix)
+
     umap_emb = umap.UMAP(
         n_components=2,
         n_neighbors=min(8, len(matrix) - 1),
@@ -36,7 +39,7 @@ def compute_embeddings(matrix: np.ndarray) -> dict[str, np.ndarray]:
         random_state=RANDOM_SEED,
     ).fit_transform(matrix, init="pca")
 
-    return {"umap": umap_emb, "pacmap": pacmap_emb}
+    return {"pca": pca_emb, "umap": umap_emb, "pacmap": pacmap_emb}
 
 
 def build_dim_reduction_table(
@@ -72,7 +75,7 @@ def main() -> None:
     embeddings = compute_embeddings(matrix)
     out = build_dim_reduction_table(shares, embeddings, languages)
     out.to_csv(PROCESSED_DIM_REDUCTION, index=False)
-    print(f"Saved embeddings -> {PROCESSED_DIM_REDUCTION}")
+    print(f"Saved embeddings (PCA, UMAP, PaCMAP) -> {PROCESSED_DIM_REDUCTION}")
 
 
 if __name__ == "__main__":

@@ -1,3 +1,12 @@
+Grupa 1 — projekty dziedzinowe i aplikacyjne
+Pierwsza grupa obejmuje projekty dotyczące konkretnych problemów analitycznych opartych na dużych zbiorach danych dziedzinowych i aplikacyjnych. Są to m.in. projekty związane z transportem miejskim i lotniczym, danymi przestrzennymi, jakością powietrza i pogodą, analizą tekstów i recenzji, społecznościami internetowymi, repozytoriami kodu, ekosystemami open source oraz narracjami medialnymi. Wspólnym elementem projektów jest przygotowanie reprezentacji wielowymiarowych danych, zastosowanie metod redukcji wymiaru, wizualizacja struktur w przestrzeni 2D, a często także klastrowanie, analiza trendów lub wykrywanie obserwacji nietypowych.
+
+Projekty z tej grupy mogą być realizowane w zespołach 1–2 osobowych.
+
+W ramach projektu należy przygotować interaktywną wizualizację lub dashboard, przeprowadzić analizę eksploracyjną danych, opisać źródło i preprocessing danych oraz przedstawić najważniejsze wnioski. Jeżeli dane mają charakter wielowymiarowy, należy zastosować co najmniej jedną metodę redukcji wymiaru spośród metod omawianych na zajęciach, np. PCA, kernel PCA, t-SNE, UMAP, TriMAP, PaCMAP lub FIt-SNE/flt-SNE.
+
+
+
 5. Ewolucja ekosystemów języków programowania
 Cel projektu:
 Celem projektu jest pokazanie zmian popularności języków programowania i technologii w czasie.
@@ -13,6 +22,7 @@ porównanie aktywności społeczności,
 przygotowanie interaktywnych wykresów trendów,
 analiza zmian dominujących technologii,
 interpretacja wyników.
+
 Element związany z redukcją wymiaru:
 Należy przygotować wektory aktywności języków lub repozytoriów i porównać wyniki UMAP, TriMAP lub PaCMAP.
 

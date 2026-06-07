@@ -23,7 +23,11 @@ def main() -> None:
     run("etl.py")
     run("build_vectors.py")
     run("dim_reduction.py")
+    run("eda.py")
     run("build_viz.py")
+    run("build_yearly_viewer.py")
+    run("build_market_snapshot_viewer.py")
+    run("build_concentration_viewer.py")
     print("\nPipeline done. Open index.html in a browser.")
 
 

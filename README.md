@@ -1,6 +1,6 @@
 # UMISI — Ewolucja ekosystemów języków programowania
 
-Wizualizacja zmian popularności języków programowania na GitHubie (2011–2024): trendy, udziały rynku, metryki społeczności oraz porównanie redukcji wymiaru (UMAP vs PaCMAP).
+Interaktywny **dashboard** (Grupa 1 UMISI): trendy, EDA, klastrowanie, redukcja wymiaru (PCA / UMAP / PaCMAP) — popularność języków na GitHubie (2011–2024).
 
 ## Szybki start
 
@@ -51,12 +51,15 @@ Własne dane BigQuery: zapisz wynik SQL do `data/raw/`, uruchom `python src/etl.
 
 | Wymaganie | Realizacja |
 |-----------|------------|
-| Przygotowanie danych | `sql/`, `src/etl.py`, `data/README.md` |
+| Dashboard interaktywny | `index.html` |
+| EDA + wnioski | `src/eda.py`, `report.md`, `viz/share_change.vl.json` |
+| Źródło i preprocessing | `docs/scope.md`, `sql/`, `src/etl.py` |
+| Przygotowanie danych | `data/README.md` |
 | Popularność w czasie | `viz/trends_line.vl.json`, `shares_stacked.vl.json` |
 | Aktywność społeczności | `viz/community_comparison.vl.json`, `bump_chart.vl.json` |
-| Wykresy interaktywne | Vega-Lite + legenda, tooltips, brush |
-| Dominujące technologie | `viz/treemap.vl.json`, `concentration.vl.json` |
-| Redukcja wymiaru | `viz/dim_reduction.vl.json` (UMAP vs PaCMAP) |
-| Interpretacja | `report.md` |
+| Dominujące technologie | `viz/treemap.vl.json`, roczne treemapy / bubbles |
+| Redukcja wymiaru | `viz/dim_reduction.vl.json` (PCA, UMAP, PaCMAP) |
+| Klastrowanie / outliers | `viz/clusters.vl.json`, `language_profiles.csv` |
+| Grupa 1 — checklist | `docs/grupa1_checklist.md` |
 
 Szczegóły: [project/task.txt](project/task.txt).

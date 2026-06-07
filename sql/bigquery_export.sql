@@ -17,7 +17,9 @@ WHERE
   AND JSON_VALUE(repo, '$.language') IS NOT NULL
   AND JSON_VALUE(repo, '$.language') IN (
     'JavaScript', 'Python', 'Java', 'TypeScript', 'C#', 'C++',
-    'Go', 'Ruby', 'PHP', 'Rust', 'Kotlin', 'Swift'
+    'PHP', 'C', 'Go', 'Ruby', 'Rust', 'Kotlin', 'Swift',
+    'Dart', 'Scala', 'R', 'Objective-C', 'Lua',
+    'Haskell', 'Julia', 'Perl'
   )
 GROUP BY month, language
 ORDER BY month, language;

@@ -18,11 +18,11 @@ Popularność języków programowania na GitHubie zmienia się nierównomiernie:
 |----------|---------|
 | Zakres dat | 2011-01 — 2024-12 (początek GH Archive) |
 | Krok czasowy | miesiąc |
-| Liczba języków | 12 (top wg aktywności) |
+| Liczba języków | 21 (top wg aktywności PushEvent) |
 
 ## Języki analizowane
 
-JavaScript, Python, Java, TypeScript, C#, C++, Go, Ruby, PHP, Rust, Kotlin, Swift
+JavaScript, Python, Java, TypeScript, C#, C++, PHP, C, Go, Ruby, Rust, Kotlin, Swift, Dart, Scala, R, Objective-C, Lua, Haskell, Julia, Perl
 
 ## Metryka aktywności (główna)
 
