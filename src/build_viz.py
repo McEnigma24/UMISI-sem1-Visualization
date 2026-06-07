@@ -745,7 +745,7 @@ def write_index_html(viz_dir: Path) -> None:
       margin-right: auto;
     }}
     .yearly-iframe-host {{
-      height: 820px;
+      height: 1040px;
       min-height: 0;
       overflow: hidden;
       justify-content: center !important;
@@ -753,7 +753,7 @@ def write_index_html(viz_dir: Path) -> None:
     .yearly-iframe-host iframe {{
       width: 100%;
       max-width: 960px;
-      height: 820px;
+      height: 1040px;
       border: none;
       border-radius: 8px;
       background: #fff;
@@ -775,7 +775,7 @@ def write_index_html(viz_dir: Path) -> None:
       overflow: hidden;
     }}
     .concentration-iframe-host {{
-      height: 520px;
+      height: 820px;
       min-height: 0;
       overflow: hidden;
       justify-content: center !important;
@@ -783,7 +783,7 @@ def write_index_html(viz_dir: Path) -> None:
     .concentration-iframe-host iframe {{
       width: 100%;
       max-width: 920px;
-      height: 520px;
+      height: 820px;
       border: none;
       border-radius: 8px;
       background: #fff;

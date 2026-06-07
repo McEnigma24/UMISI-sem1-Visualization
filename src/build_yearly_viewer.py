@@ -146,8 +146,9 @@ def render_html(payload: dict) -> str:
     * {{ box-sizing: border-box; }}
     html, body {{
       margin: 0;
-      overflow: hidden;
-      height: 100%;
+      overflow-x: hidden;
+      overflow-y: auto;
+      min-height: 100%;
     }}
     body {{
       font-family: system-ui, -apple-system, Segoe UI, sans-serif;
@@ -157,7 +158,7 @@ def render_html(payload: dict) -> str:
     .viewer {{
       max-width: 920px;
       margin: 0 auto;
-      padding: 0.5rem 1rem 0;
+      padding: 0.5rem 1rem 1.25rem;
     }}
     .toolbar {{
       display: flex;
@@ -193,7 +194,7 @@ def render_html(payload: dict) -> str:
       display: flex;
       justify-content: center;
       align-items: flex-start;
-      overflow: hidden;
+      overflow: visible;
     }}
     .viewer.grid-mode .stage-wrap {{
       max-height: 640px;
