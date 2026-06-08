@@ -140,7 +140,52 @@
       color: #334155;
       line-height: 1;
     }
-    .event-marker { cursor: help; }
+    .event-marker { cursor: default; }
+    .event-marker-hit { cursor: pointer; pointer-events: all; }
+    .chart-tooltip {
+      position: fixed;
+      z-index: 8000;
+      left: 0;
+      top: 0;
+      max-width: min(22rem, calc(100vw - 1.5rem));
+      padding: 0.65rem 0.85rem 0.75rem;
+      background: linear-gradient(165deg, #1e293b 0%, #0f172a 100%);
+      color: #e2e8f0;
+      border-radius: 10px;
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      box-shadow: 0 14px 40px rgba(0, 0, 0, 0.28), 0 0 0 1px rgba(255, 255, 255, 0.06) inset;
+      font-size: 0.84rem;
+      line-height: 1.45;
+      pointer-events: none;
+      opacity: 0;
+      transform: translateY(4px);
+      transition: opacity 0.06s ease, transform 0.06s ease;
+    }
+    .chart-tooltip.is-visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .chart-tooltip[hidden] { display: none !important; }
+    .chart-tooltip-kind {
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: #94a3b8;
+      margin-bottom: 0.35rem;
+    }
+    .chart-tooltip-kind.kind-1 { color: #fcd34d; }
+    .chart-tooltip-kind.kind-2 { color: #a5b4fc; }
+    .chart-tooltip-period {
+      font-weight: 700;
+      font-size: 1rem;
+      color: #f8fafc;
+      margin-bottom: 0.45rem;
+    }
+    .chart-tooltip-body p {
+      margin: 0 0 0.35rem;
+    }
+    .chart-tooltip-body p:last-child { margin-bottom: 0; }
   </style>
 </head>
 <body>
@@ -173,6 +218,11 @@
       <span class="share-label" id="shareLabel"></span>
     </div>
     <div id="stage"></div>
+    <div id="chartTooltip" class="chart-tooltip" hidden role="tooltip">
+      <div class="chart-tooltip-kind" id="chartTooltipKind"></div>
+      <div class="chart-tooltip-period" id="chartTooltipPeriod"></div>
+      <div class="chart-tooltip-body" id="chartTooltipBody"></div>
+    </div>
     <div class="lang-panel" id="langPanel"></div>
   </div>
   <script>
@@ -281,36 +331,95 @@
       return 0;
     }
 
-    function escapeXml(t) {
-      return String(t)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;");
+    function escapeHtml(t) {
+      const d = document.createElement("div");
+      d.textContent = t;
+      return d.innerHTML;
     }
 
-    function buildEventTooltip(idx) {
+    /** Zwraca obiekt do ladnego tooltipu lub null */
+    function buildEventTooltipParts(idx) {
       const cur = pointAt(idx);
       const prev = pointAt(idx - 1);
-      if (!prev) return "";
-      const p = cur.period;
+      if (!prev) return null;
       const kind = eventKindAt(idx);
       if (kind === 1) {
         const prevSet = new Set(prev.languages);
         const curSet = new Set(cur.languages);
         const added = cur.languages.filter(l => !prevSet.has(l));
         const removed = prev.languages.filter(l => !curSet.has(l));
-        let body = "Zmiana skladu top " + topN + ".";
-        if (added.length) body += " Wchodza: " + added.join(", ") + ".";
-        if (removed.length) body += " Wychodza: " + removed.join(", ") + ".";
-        return p + ": " + body;
+        const lines = [];
+        lines.push("Zmiana skladu top " + topN + ".");
+        if (added.length) lines.push("Wchodza: " + added.join(", ") + ".");
+        if (removed.length) lines.push("Wychodza: " + removed.join(", ") + ".");
+        return { period: String(cur.period), kind: 1, kindLabel: "Zmiana skladu", lines };
       }
       if (kind === 2) {
-        const prevOrd = prev.languages.join(" > ");
-        const curOrd = cur.languages.join(" > ");
-        return p + ": zmiana kolejnosci w top " + topN + ". Bylo: " + prevOrd + ". Jest: " + curOrd + ".";
+        return {
+          period: String(cur.period),
+          kind: 2,
+          kindLabel: "Zmiana kolejnosci",
+          lines: [
+            "Bylo: " + prev.languages.join(" > "),
+            "Jest: " + cur.languages.join(" > "),
+          ],
+        };
       }
-      return "";
+      return null;
+    }
+
+    function positionChartTooltip(el, clientX, clientY) {
+      const pad = 10;
+      const margin = 14;
+      el.hidden = false;
+      el.classList.remove("is-visible");
+      let left = clientX + margin;
+      let top = clientY + margin;
+      const w = el.offsetWidth;
+      const h = el.offsetHeight;
+      if (left + w > window.innerWidth - pad) left = window.innerWidth - w - pad;
+      if (top + h > window.innerHeight - pad) top = window.innerHeight - h - pad;
+      if (left < pad) left = pad;
+      if (top < pad) top = pad;
+      el.style.left = left + "px";
+      el.style.top = top + "px";
+      requestAnimationFrame(() => el.classList.add("is-visible"));
+    }
+
+    let _tipHideTimer = null;
+    function bindChartTooltips() {
+      const tip = document.getElementById("chartTooltip");
+      const kindEl = document.getElementById("chartTooltipKind");
+      const periodEl = document.getElementById("chartTooltipPeriod");
+      const bodyEl = document.getElementById("chartTooltipBody");
+      if (!tip || !stage) return;
+
+      function hideTip() {
+        tip.classList.remove("is-visible");
+        tip.hidden = true;
+      }
+
+      stage.querySelectorAll(".event-marker").forEach(g => {
+        const idx = parseInt(g.getAttribute("data-event-idx"), 10);
+        const hit = g.querySelector(".event-marker-hit");
+        if (!hit || Number.isNaN(idx)) return;
+        hit.addEventListener("mouseenter", ev => {
+          clearTimeout(_tipHideTimer);
+          const parts = buildEventTooltipParts(idx);
+          if (!parts) return;
+          kindEl.textContent = parts.kindLabel;
+          kindEl.className = "chart-tooltip-kind kind-" + parts.kind;
+          periodEl.textContent = parts.period;
+          bodyEl.innerHTML = parts.lines.map(line => "<p>" + escapeHtml(line) + "</p>").join("");
+          positionChartTooltip(tip, ev.clientX, ev.clientY);
+        });
+        hit.addEventListener("mousemove", ev => {
+          if (!tip.hidden) positionChartTooltip(tip, ev.clientX, ev.clientY);
+        });
+        hit.addEventListener("mouseleave", () => {
+          _tipHideTimer = setTimeout(hideTip, 40);
+        });
+      });
     }
 
     function xPos(idx) {
@@ -362,20 +471,19 @@
         const x = xPos(idx);
         const y = yPos(d.share_pct);
         const isCurrent = idx === upToIdx;
-        const tip = escapeXml(buildEventTooltip(idx));
         const r = isCurrent ? 7 : 5.5;
         if (kind === 1) {
-          s += `<g class="event-marker">`;
-          s += `<title>${tip}</title>`;
+          s += `<g class="event-marker" data-event-idx="${idx}">`;
           s += `<circle cx="${x}" cy="${y}" r="${r}" fill="#f59e0b" stroke="#b45309" stroke-width="2"/>`;
           s += `<circle cx="${x}" cy="${y}" r="2" fill="#fff"/>`;
+          s += `<circle cx="${x}" cy="${y}" r="14" fill="transparent" class="event-marker-hit"/>`;
           s += `</g>`;
         } else {
           const sz = isCurrent ? 8 : 6.5;
-          s += `<g class="event-marker">`;
-          s += `<title>${tip}</title>`;
+          s += `<g class="event-marker" data-event-idx="${idx}">`;
           s += `<path d="M ${x} ${y - sz} L ${x + sz} ${y} L ${x} ${y + sz} L ${x - sz} ${y} Z"`;
           s += ` fill="#6366f1" stroke="#4338ca" stroke-width="1.6"/>`;
+          s += `<circle cx="${x}" cy="${y}" r="14" fill="transparent" class="event-marker-hit"/>`;
           s += `</g>`;
         }
       }
@@ -394,9 +502,10 @@
 
       s += `<text x="${M.left}" y="16" font-size="13" font-weight="600" fill="#111">Laczny udzial top N (%)</text>`;
       s += `<text x="${M.left + INNER_W}" y="16" font-size="10" font-weight="500" fill="#222" text-anchor="end">`;
-      s += `Kolo pom.: zmiana skladu. Romby: tylko kolejnosc — najedz myszka po opis.</text>`;
+      s += `Kolo pom.: zmiana skladu. Romby: tylko kolejnosc — najedz (szybki opis przy kursorze).</text>`;
       s += `</svg>`;
       stage.innerHTML = s;
+      bindChartTooltips();
     }
 
     function renderLangPanel(idx) {

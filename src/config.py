@@ -154,6 +154,8 @@ PROCESSED_VECTORS = DATA_PROCESSED / "language_vectors.csv"
 
 PROCESSED_DIM_REDUCTION = DATA_PROCESSED / "dim_reduction.csv"
 
+PROCESSED_DIM_REDUCTION_3D = DATA_PROCESSED / "dim_reduction_3d.csv"
+
 PROCESSED_PCA_VARIANCE = DATA_PROCESSED / "pca_explained_variance.csv"
 
 PROCESSED_LANGUAGE_PROFILES = DATA_PROCESSED / "language_profiles.csv"

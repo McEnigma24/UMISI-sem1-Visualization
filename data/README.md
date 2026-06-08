@@ -11,7 +11,7 @@
 | `processed/community_metrics.csv` | Metryki społeczności: `events_per_actor`, `actor_rank` |
 | `processed/market_concentration.csv` | HHI i udział top 3 języków per miesiąc |
 | `processed/language_vectors.csv` | Długi format wektorów cech (profil czasowy) |
-| `processed/dim_reduction.csv` | Współrzędne 2D: PCA, UMAP, PaCMAP |
+| `processed/dim_reduction_3d.csv` | Te same metody co 2D: współrzędne **x, y, z** (embedding 3D) |
 | `processed/eda_language_summary.csv` | EDA: statystyki i trendy per język |
 | `processed/language_profiles.csv` | Profile + klastry + flaga outlier |
 | `processed/language_clusters.csv` | KMeans (k=3) na wektorach profili |

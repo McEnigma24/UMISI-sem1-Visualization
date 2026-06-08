@@ -55,19 +55,25 @@ Obserwacje (na danych projektu):
 
 **Wykres zmiany udziału:** `viz/share_change.vl.json` (outliers na czerwono).
 
-## 7. Redukcja wymiaru (PCA, UMAP, PaCMAP)
+## 7. Redukcja wymiaru (zestaw metod z zajęć)
 
-**Wykres:** `viz/dim_reduction.vl.json`
+**Wykres:** `viz/dim_reduction.vl.json` — **pionowy układ** (jedna metoda pod drugą), **etykiety języków na punktach** (bez legendy kolorów), wspólna paleta jak w reszcie dashboardu.
 
-Dla każdego języka wektor ~168 wymiarów (miesięczne udziały %, `log1p` + standaryzacja). Te same wektory rzutowano na 2D trzema metodami:
+Dodatkowo **interaktywna scena 3D** w `index.html`: specyfikacja z `viz/dim_reduction_3d.spec.json` (generowana razem z wykresem), **osadzenie w tej samej stronie** (bez iframe — działa przy `file://`), biblioteka Plotly z CDN; osobno można otworzyć **`viz/dim_reduction_3d.html`** (Plotly dołączony do pliku, np. offline).
+
+Dla każdego języka wektor ~168 wymiarów (miesięczne udziały %, `log1p` + standaryzacja). Te same wektory rzutowano na 2D następującymi metodami:
 
 | Metoda | Charakterystyka |
 |--------|-----------------|
-| **PCA** | Liniowa baza — dominujące kierunki zmian w czasie (odpowiednik omawianego na zajęciach) |
-| **UMAP** | Silniejsze grupowanie lokalne — podobne kształty trendów blisko siebie |
-| **PaCMAP** | Lepsza struktura globalna między klastrami „stabilnymi” a „rosnącymi” |
+| **PCA** | Liniowa baza — dominujące kierunki zmian w czasie |
+| **Kernel PCA (RBF)** | Nieliniowe odwzorowanie w przestrzeń cech, potem 2D (kernel z omówień) |
+| **t-SNE (sklearn)** | Klasyczny t-SNE (Barnes–Hut) — lokalne sąsiedztwa w przestrzeni wysokowymiarowej |
+| **UMAP** | Zachowanie struktury lokalnej i części globalnej (n_neighbors dopasowany do ~21 języków) |
+| **TriMAP** | Niska wymiarowość z naciskiem na zachowanie tripletów odległości |
+| **PaCMAP** | Balans lokalny / „daleki” (MN + FP) — czytelniejsza separacja klastrów przy małej próbce |
+| **OpenTSNE** | Implementacja z rodziny szybkiego t-SNE (FFT / optymalizacja z literatury bliskiej **FIt-SNE**) |
 
-**Interpretacja:** Języki rosnące (TypeScript, Rust, Python) odróżniają się od spadających (Ruby, PHP). Java i C# leżą pośrodku jako ekosystemy enterprise.
+**Interpretacja:** Języki rosnące (TypeScript, Rust, Python) odróżniają się od spadających (Ruby, PHP). Java i C# leżą pośrodku jako ekosystemy enterprise. Poszczególne panele mają **niezależne osie** (`resolve_scale`), więc nie porównujemy liczbowo współrzędnych między metodami — tylko względne sąsiedztwa w obrębie jednego panelu.
 
 Uwaga: embedding jest **statyczny** na pełnej historii — nie porównujemy układów osi między miesiącami.
 

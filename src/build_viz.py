@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import base64
 import math
+import shutil
 from pathlib import Path
 
 import altair as alt
@@ -17,20 +19,25 @@ MAX_BUBBLE_AREA = 2800.0
 
 from config import (
     DATA_PROCESSED,
+    LANGUAGE_COLORS,
     LANGUAGES,
     PROCESSED_COMMUNITY,
     PROCESSED_CONCENTRATION,
     PROCESSED_DIM_REDUCTION,
+    PROCESSED_DIM_REDUCTION_3D,
     PROCESSED_LANGUAGE_PROFILES,
     PROCESSED_PCA_VARIANCE,
     PROCESSED_SHARES,
     VIZ_DIR,
 )
 
+from dim_reduction import METHOD_ORDER
+
 alt.data_transformers.disable_max_rows()
 
 
 def _save_chart(chart: alt.Chart, path: Path) -> None:
+    chart = chart.configure_title(anchor="middle")
     chart.save(str(path))
     print(f"Saved {path.name}")
 
@@ -467,24 +474,58 @@ def chart_concentration(shares: pd.DataFrame) -> alt.Chart:
 
 
 def chart_dim_reduction(dim: pd.DataFrame) -> alt.Chart:
-    selection = alt.selection_point(fields=["language"], bind="legend")
-    method_order = ["pca", "umap", "pacmap"]
+    """Pionowy stos paneli; kolory wg palety projektu; etykiety na wykresie (bez legend)."""
+    method_labels = [label for _, label in METHOD_ORDER]
     data = dim.copy()
-    data["method"] = pd.Categorical(data["method"], categories=method_order, ordered=True)
-    return (
-        alt.Chart(data)
-        .mark_circle(size=180)
+    if "method_label" not in data.columns:
+        data["method_label"] = data["method"].astype(str)
+    data["method_label"] = pd.Categorical(
+        data["method_label"], categories=method_labels, ordered=True
+    )
+
+    lang_colors = [LANGUAGE_COLORS[lang] for lang in LANGUAGES]
+    color_scale = alt.Scale(domain=LANGUAGES, range=lang_colors)
+
+    base_enc = dict(
+        x=alt.X("x:Q", title="Wymiar 1"),
+        y=alt.Y("y:Q", title="Wymiar 2"),
+        color=alt.Color("language:N", scale=color_scale, legend=None),
+    )
+
+    points = (
+        alt.Chart()
+        .mark_circle(size=150, stroke="white", strokeWidth=1)
         .encode(
-            x=alt.X("x:Q", title="Dimension 1"),
-            y=alt.Y("y:Q", title="Dimension 2"),
-            color=alt.Color("language:N", title="Language"),
-            facet=alt.Facet("method:N", title="Dimensionality reduction", columns=3),
-            size=alt.Size("total_push_events:Q", title="Total PushEvents"),
-            opacity=alt.condition(selection, alt.value(0.95), alt.value(0.25)),
-            tooltip=["language", "method", "avg_share_pct", "total_unique_actors"],
+            **base_enc,
+            tooltip=[
+                "language",
+                alt.Tooltip("method_label:N", title="Metoda"),
+                alt.Tooltip("avg_share_pct:Q", format=".2f", title="Sredni udzial (%)"),
+                alt.Tooltip("total_push_events:Q", title="PushEvents (suma)"),
+            ],
         )
-        .add_params(selection)
-        .properties(width=260, height=260, title="PCA vs UMAP vs PaCMAP - language trend profiles")
+    )
+    labels = (
+        alt.Chart()
+        .mark_text(dy=-11, fontSize=9, align="center", color="#1a1a1a")
+        .encode(**base_enc, text="language:N")
+    )
+
+    return (
+        alt.layer(points, labels, data=data)
+        .properties(
+            width=760,
+            height=260,
+            title="Profile trendow jezykow — porownanie metod redukcji wymiaru",
+        )
+        .facet(
+            row=alt.Row(
+                "method_label:N",
+                sort=method_labels,
+                header=alt.Header(labelFontSize=12, labelOrient="top"),
+            )
+        )
+        .resolve_scale(x="independent", y="independent")
     )
 
 
@@ -562,6 +603,114 @@ def chart_clusters(dim: pd.DataFrame, profiles: pd.DataFrame) -> alt.Chart:
     )
 
 
+def write_dim_reduction_3d_html(viz_dir: Path) -> None:
+    """Interaktywny wykres 3D (Plotly): obrot sceny, zoom scroll, przelacznik metody."""
+    import numpy as np
+    import plotly.graph_objects as go
+
+    if not PROCESSED_DIM_REDUCTION_3D.exists():
+        print("Pomijam dim_reduction_3d.html (brak dim_reduction_3d.csv — uruchom dim_reduction.py).")
+        return
+
+    df = pd.read_csv(PROCESSED_DIM_REDUCTION_3D)
+    smin, smax = 7.0, 16.0
+
+    fig = go.Figure()
+    n_methods = len(METHOD_ORDER)
+
+    for idx, (mid, mlabel) in enumerate(METHOD_ORDER):
+        sub = df[df["method"] == mid]
+        if len(sub) == 0:
+            raise ValueError(f"Brak punktow dla metody {mid} w {PROCESSED_DIM_REDUCTION_3D}")
+        logv = np.log1p(sub["total_push_events"].to_numpy(dtype=float))
+        lo, hi = float(logv.min()), float(logv.max())
+        if hi - lo < 1e-12:
+            ms = np.full(len(sub), (smin + smax) / 2.0)
+        else:
+            ms = smin + (logv - lo) / (hi - lo) * (smax - smin)
+        colors = [LANGUAGE_COLORS[str(lang)] for lang in sub["language"]]
+
+        fig.add_trace(
+            go.Scatter3d(
+                x=sub["x"],
+                y=sub["y"],
+                z=sub["z"],
+                mode="markers+text",
+                text=sub["language"],
+                textposition="top center",
+                textfont=dict(size=10, color="#1a1a1a"),
+                name=mlabel,
+                marker=dict(
+                    size=ms,
+                    color=colors,
+                    line=dict(width=1, color="rgba(255,255,255,0.9)"),
+                    opacity=0.93,
+                ),
+                hovertemplate=(
+                    "<b>%{text}</b><br>"
+                    "Wymiar 1: %{x:.3f}<br>Wymiar 2: %{y:.3f}<br>Wymiar 3: %{z:.3f}<br>"
+                    "<extra></extra>"
+                ),
+                visible=(idx == 0),
+            )
+        )
+
+    buttons = [
+        dict(
+            label=label,
+            method="update",
+            args=[{"visible": [i == j for j in range(n_methods)]}],
+        )
+        for i, (_, label) in enumerate(METHOD_ORDER)
+    ]
+
+    fig.update_layout(
+        updatemenus=[
+            dict(
+                buttons=buttons,
+                direction="down",
+                pad={"r": 8, "t": 8},
+                showactive=True,
+                x=0.01,
+                xanchor="left",
+                y=1.0,
+                yanchor="bottom",
+            )
+        ],
+        scene=dict(
+            aspectmode="data",
+            bgcolor="rgba(248,249,251,0.98)",
+            dragmode="orbit",
+            xaxis=dict(title="Wymiar 1", gridcolor="#ddd", showbackground=True, backgroundcolor="#fafafa"),
+            yaxis=dict(title="Wymiar 2", gridcolor="#ddd", showbackground=True, backgroundcolor="#fafafa"),
+            zaxis=dict(title="Wymiar 3", gridcolor="#ddd", showbackground=True, backgroundcolor="#fafafa"),
+        ),
+        margin=dict(l=0, r=0, t=48, b=0),
+        height=700,
+        paper_bgcolor="#fff",
+        title=dict(
+            text="Redukcja wymiaru 3D — obrót: przeciągnij, przybliżenie: scroll",
+            x=0.5,
+            xanchor="center",
+            font=dict(size=14),
+        ),
+    )
+
+    spec_path = viz_dir / "dim_reduction_3d.spec.json"
+    spec_path.write_text(fig.to_json(), encoding="utf-8")
+    print(f"Saved {spec_path.name}")
+
+    # Samodzielny plik (dwuklik) — Plotly wbudowany, bez SRI z CDN (czesto blokada / niezgodnosc hash).
+    out_path = viz_dir / "dim_reduction_3d.html"
+    fig.write_html(
+        str(out_path),
+        full_html=True,
+        include_plotlyjs=True,
+        config={"displayModeBar": True, "displaylogo": False, "scrollZoom": True},
+    )
+    print(f"Saved {out_path.name}")
+
+
 def write_index_html(viz_dir: Path) -> None:
     charts = [
         ("trends_line.vl.json", "Trendy aktywnosci", False),
@@ -572,7 +721,11 @@ def write_index_html(viz_dir: Path) -> None:
         ("share_change.vl.json", "EDA: zmiana udzialu (2011-2024)", False),
         ("pca_variance.vl.json", "EDA: wariancja PCA", False),
         ("clusters.vl.json", "EDA: klastrowanie (k-means)", False),
-        ("dim_reduction.vl.json", "Redukcja wymiaru (PCA, UMAP, PaCMAP)", True),
+        (
+            "dim_reduction.vl.json",
+            "Redukcja wymiaru (PCA, kPCA, t-SNE, UMAP, TriMAP, PaCMAP, OpenTSNE)",
+            True,
+        ),
     ]
 
     market_snapshot_section = """
@@ -597,6 +750,25 @@ def write_index_html(viz_dir: Path) -> None:
         <div class="chart-host concentration-iframe-host">
           <iframe id="concentration-viewer" title="Koncentracja rynku kwartalna" loading="lazy" scrolling="no"></iframe>
         </div>
+      </section>"""
+
+    dim3_spec_path = viz_dir / "dim_reduction_3d.spec.json"
+    if dim3_spec_path.exists():
+        _b64 = base64.standard_b64encode(dim3_spec_path.read_bytes()).decode("ascii")
+        dim_reduction_3d_section = f"""
+      <section class="chart-section wide">
+        <h2>Redukcja wymiaru 3D (interaktywna)</h2>
+        <p class="yearly-viewer-desc">Obrót: przeciągnij myszką. Przybliżenie: scroll (albo pasek narzędzi Plotly). Metodę wybierz z listy nad wykresem. Wykres jest osadzony w tej stronie (bez iframe), żeby działał także przy otwarciu pliku z dysku.</p>
+        <textarea id="plotly-dim3d-spec-b64" hidden readonly>{_b64}</textarea>
+        <div class="chart-host dim3-plot-host">
+          <div id="plotly-dim3d-root" style="width:100%;height:680px;max-width:100%;"></div>
+        </div>
+      </section>"""
+    else:
+        dim_reduction_3d_section = """
+      <section class="chart-section wide">
+        <h2>Redukcja wymiaru 3D (interaktywna)</h2>
+        <p class="yearly-viewer-desc">Brak danych 3D — uruchom <code>python src/dim_reduction.py</code>, potem <code>python src/build_viz.py</code>.</p>
       </section>"""
 
     sections: list[str] = []
@@ -628,6 +800,8 @@ def write_index_html(viz_dir: Path) -> None:
       .catch(err => showError('chart-{chart_idx}', err));"""
         )
         chart_idx += 1
+        if filename == "dim_reduction.vl.json":
+            sections.append(dim_reduction_3d_section)
         if filename == "shares_stacked.vl.json":
             sections.append(market_snapshot_section)
             sections.append(yearly_viewer_section)
@@ -641,6 +815,7 @@ def write_index_html(viz_dir: Path) -> None:
   <script src="https://cdn.jsdelivr.net/npm/vega@5"></script>
   <script src="https://cdn.jsdelivr.net/npm/vega-lite@6"></script>
   <script src="https://cdn.jsdelivr.net/npm/vega-embed@6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@3.6.0/plotly.min.js"></script>
   <style>
     *, *::before, *::after {{ box-sizing: border-box; }}
     html {{ -webkit-text-size-adjust: 100%; }}
@@ -676,31 +851,39 @@ def write_index_html(viz_dir: Path) -> None:
       padding: clamp(1rem, 2vw, 1.5rem);
       margin-bottom: 1.5rem;
       box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }}
     .chart-section h2 {{
       margin: 0 0 1rem;
       font-size: clamp(1rem, 2vw, 1.2rem);
       text-align: center;
+      width: 100%;
     }}
     .chart-host {{
       width: 100%;
       display: flex;
       justify-content: center;
+      align-items: center;
       overflow-x: auto;
       overflow-y: hidden;
       padding-bottom: 0.25rem;
     }}
+    .chart-host[id^="chart-"] {{
+      width: auto;
+      max-width: 100%;
+    }}
     .chart-host.yearly-iframe-host,
     .chart-host.concentration-iframe-host {{
       overflow-y: visible;
-      align-items: flex-start;
-    }}
-    .chart-section.wide .chart-host {{
-      justify-content: flex-start;
+      align-items: center;
+      justify-content: center;
     }}
     .vega-embed {{
       margin: 0 auto;
       max-width: 100%;
+      width: fit-content;
     }}
     .vega-embed svg {{
       display: block;
@@ -736,6 +919,7 @@ def write_index_html(viz_dir: Path) -> None:
       max-width: 960px;
       min-height: 360px;
       height: 720px;
+      margin: 0 auto;
       border: none;
       border-radius: 8px;
       background: #fff;
@@ -767,9 +951,21 @@ def write_index_html(viz_dir: Path) -> None:
       max-width: 920px;
       min-height: 320px;
       height: 680px;
+      margin: 0 auto;
       border: none;
       border-radius: 8px;
       background: #fff;
+    }}
+    .dim3-plot-host {{
+      width: 100%;
+      max-width: 100%;
+      min-height: 680px;
+      height: 700px;
+      overflow: hidden;
+      justify-content: center !important;
+    }}
+    .dim3-plot-host .plotly {{
+      margin: 0 auto;
     }}
     @media (max-width: 720px) {{
       .chart-section {{
@@ -816,6 +1012,10 @@ def write_index_html(viz_dir: Path) -> None:
           view.width(available).run();
         }}
       }});
+      var p3 = document.getElementById('plotly-dim3d-root');
+      if (p3 && window.Plotly && p3.querySelector && p3.querySelector('.js-plotly-plot')) {{
+        window.Plotly.Plots.resize(p3);
+      }}
     }});
 
     window.addEventListener('message', function(ev) {{
@@ -851,6 +1051,23 @@ def write_index_html(viz_dir: Path) -> None:
       if (cv) {{
         cv.src = inViz ? 'concentration_viewer.html' : 'viz/concentration_viewer.html';
       }}
+      function mountPlotlyDim3d() {{
+        var root = document.getElementById('plotly-dim3d-root');
+        var ta = document.getElementById('plotly-dim3d-spec-b64');
+        if (!root || !ta || typeof Plotly === 'undefined') return;
+        try {{
+          var json = atob(ta.value.trim());
+          var fig = JSON.parse(json);
+          var cfg = fig.config || {{}};
+          cfg.displaylogo = false;
+          cfg.scrollZoom = true;
+          cfg.responsive = true;
+          Plotly.newPlot(root, fig.data, fig.layout, cfg);
+        }} catch (e) {{
+          root.textContent = 'Blad wczytywania wykresu 3D: ' + e;
+        }}
+      }}
+      mountPlotlyDim3d();
       {''.join(embed_calls)}
     }});
   </script>
@@ -873,6 +1090,7 @@ def export_data_for_vl() -> None:
         "community_metrics.csv",
         "market_concentration.csv",
         "dim_reduction.csv",
+        "dim_reduction_3d.csv",
         "language_profiles.csv",
         "pca_explained_variance.csv",
         "eda_language_summary.csv",
@@ -881,6 +1099,9 @@ def export_data_for_vl() -> None:
         src = DATA_PROCESSED / name
         if src.exists():
             pd.read_csv(src).to_csv(out / name, index=False)
+    spec_viz = VIZ_DIR / "dim_reduction_3d.spec.json"
+    if spec_viz.exists():
+        shutil.copy2(spec_viz, out / "dim_reduction_3d.spec.json")
 
 
 def main() -> None:
@@ -911,6 +1132,7 @@ def main() -> None:
     _save_chart(chart_pca_variance(variance), VIZ_DIR / "pca_variance.vl.json")
     _save_chart(chart_clusters(dim, profiles), VIZ_DIR / "clusters.vl.json")
     _save_chart(chart_dim_reduction(dim), VIZ_DIR / "dim_reduction.vl.json")
+    write_dim_reduction_3d_html(VIZ_DIR)
 
     export_data_for_vl()
     write_index_html(VIZ_DIR)
