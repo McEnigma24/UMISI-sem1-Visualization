@@ -95,15 +95,30 @@ def render_html(payload: dict) -> str:
       gap: 0.45rem;
       align-items: stretch;
       width: 100%;
-      max-width: 720px;
+      max-width: 920px;
       margin: 0 auto 0.65rem;
     }}
-    .slideshow-row {{
+    .slideshow-row.slideshow-toolbar-line {{
       display: flex;
       flex-wrap: wrap;
       align-items: center;
       justify-content: center;
-      gap: 0.45rem 0.65rem;
+      gap: 0.65rem 1rem;
+      width: 100%;
+    }}
+    .nav-cluster {{
+      display: inline-flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.4rem 0.55rem;
+    }}
+    .speed-cluster label {{
+      display: inline-flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.3rem 0.55rem;
+      font-size: 0.9rem;
+      color: #333;
     }}
     .toolbar {{
       display: flex; flex-wrap: wrap; gap: 0.5rem 1rem;
@@ -118,42 +133,61 @@ def render_html(payload: dict) -> str:
       border: 1px solid #ccc; background: #f8f8f8; border-radius: 6px;
       padding: 0.4rem 0.75rem; cursor: pointer; font-size: 0.9rem;
     }}
-    button.btn-play-pause {{ min-width: 8.5rem; font-weight: 600; }}
-    button.btn-loop {{ min-width: 11rem; font-weight: 600; }}
-    button.btn-loop.active {{
-      background: #1a56db; color: #fff; border-color: #1a56db;
+    button.btn-play-icon {{
+      min-width: 2.65rem;
+      width: 2.65rem;
+      height: 2.65rem;
+      padding: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: #1f2937;
     }}
-    .speed-row label {{
-      display: inline-flex; flex-wrap: wrap; align-items: center;
-      gap: 0.35rem 0.65rem;
+    button.btn-play-icon svg {{ display: block; flex-shrink: 0; }}
+    button.btn-play-icon.is-playing {{
+      background: #1a56db;
+      color: #fff;
+      border-color: #1a56db;
+    }}
+    button.btn-loop {{
+      min-width: 2.65rem;
+      width: 2.65rem;
+      height: 2.65rem;
+      padding: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: #1f2937;
+    }}
+    button.btn-loop svg {{ display: block; flex-shrink: 0; }}
+    button.btn-loop.active {{
+      background: #1a56db;
+      color: #fff;
+      border-color: #1a56db;
     }}
     .speed-step-hint {{ font-size: 0.8rem; color: #64748b; }}
-    .period-label {{ font-size: 1.25rem; font-weight: 600; min-width: 5.5rem; text-align: center; }}
   </style>
 </head>
 <body>
   <div class="viewer">
     <div class="slideshow-rows" id="slideshowControls">
-      <div class="slideshow-row nav-row">
-        <button type="button" id="btnFirst" title="Pierwszy kwartal">&#9198;</button>
-        <button type="button" id="btnPrev" title="Poprzedni kwartal">&#9664;</button>
-        <label>Kwartal <select id="periodSelect"></select></label>
-        <span class="period-label" id="periodLabel"></span>
-        <button type="button" id="btnNext" title="Nastepny kwartal">&#9654;</button>
-        <button type="button" id="btnLast" title="Ostatni kwartal">&#9197;</button>
-      </div>
-      <div class="slideshow-row">
-        <button type="button" id="btnPlay" class="btn-play-pause">Odtwarzaj</button>
-      </div>
-      <div class="slideshow-row speed-row">
-        <label>Predkosc (ms)
-          <input type="range" id="speedRange" min="100" max="4000" step="50" value="1000" />
-          <span id="speedVal">1000</span>
-          <span class="speed-step-hint" id="speedStepHint"></span>
-        </label>
-      </div>
-      <div class="slideshow-row">
-        <button type="button" id="btnLoop" class="btn-loop active" aria-pressed="true">Zapetlanie: wlaczone</button>
+      <div class="slideshow-row slideshow-toolbar-line">
+        <div class="nav-cluster">
+          <button type="button" id="btnFirst" title="Pierwszy kwartal">&#9198;</button>
+          <button type="button" id="btnPrev" title="Poprzedni kwartal">&#9664;</button>
+          <select id="periodSelect" aria-label="Kwartal" title="Wybor kwartalu"></select>
+          <button type="button" id="btnNext" title="Nastepny kwartal">&#9654;</button>
+          <button type="button" id="btnLast" title="Ostatni kwartal">&#9197;</button>
+        </div>
+        <div class="speed-cluster">
+          <label>Predkosc (ms)
+            <input type="range" id="speedRange" min="100" max="4000" step="50" value="1000" />
+            <span id="speedVal">1000</span>
+            <span class="speed-step-hint" id="speedStepHint"></span>
+          </label>
+        </div>
+        <button type="button" id="btnPlay" class="btn-play-icon" title="Odtwarzaj" aria-label="Odtwarzaj slideshow"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 5v14l11-7z"/></svg></button>
+        <button type="button" id="btnLoop" class="btn-loop active" aria-pressed="true" title="Zapetlanie wlaczone" aria-label="Wlacz i wylacz zapetlanie slajdowa"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></button>
       </div>
     </div>
     <div id="stage"></div>
@@ -174,7 +208,6 @@ def render_html(payload: dict) -> str:
 
     const stage = document.getElementById("stage");
     const periodSelect = document.getElementById("periodSelect");
-    const periodLabel = document.getElementById("periodLabel");
 
     PERIODS.forEach((p, i) => {{
       const opt = document.createElement("option");
@@ -183,12 +216,25 @@ def render_html(payload: dict) -> str:
       periodSelect.appendChild(opt);
     }});
 
+    const PLAY_ICON = '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 5v14l11-7z"/></svg>';
+    const PAUSE_ICON = '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M6 5h4v14H6V5zm8 0h4v14h-4V5z"/></svg>';
+
+    function syncPlayIcon(playing) {{
+      const b = document.getElementById("btnPlay");
+      if (!b) return;
+      b.classList.toggle("is-playing", playing);
+      b.innerHTML = playing ? PAUSE_ICON : PLAY_ICON;
+      b.title = playing ? "Pauza" : "Odtwarzaj";
+      b.setAttribute("aria-label", playing ? "Pauza" : "Odtwarzaj slideshow");
+    }}
+
     function syncLoopButton() {{
       const b = document.getElementById("btnLoop");
       if (!b) return;
       b.classList.toggle("active", loopEnabled);
       b.setAttribute("aria-pressed", loopEnabled ? "true" : "false");
-      b.textContent = loopEnabled ? "Zapetlanie: wlaczone" : "Zapetlanie: wylaczone";
+      b.title = loopEnabled ? "Zapetlanie wlaczone" : "Zapetlanie wylaczone";
+      b.setAttribute("aria-label", loopEnabled ? "Wylacz zapetlanie" : "Wlacz zapetlanie");
     }}
     function syncSpeedStepHint() {{
       const r = document.getElementById("speedRange");
@@ -197,6 +243,7 @@ def render_html(payload: dict) -> str:
     }}
     syncLoopButton();
     syncSpeedStepHint();
+    syncPlayIcon(false);
 
     function currentPeriod() {{ return PERIODS[periodIndex]; }}
     function itemsFor(period) {{ return DATA.layouts[period] || []; }}
@@ -284,7 +331,6 @@ def render_html(payload: dict) -> str:
 
     function drawSingle(period) {{
       stage.innerHTML = renderStatic(itemsFor(period));
-      periodLabel.textContent = period;
       periodSelect.value = String(periodIndex);
     }}
 
@@ -304,18 +350,17 @@ def render_html(payload: dict) -> str:
       const hardCut = isLoopWrap(prev, periodIndex);
       if (animate && !hardCut) animateTo(currentPeriod(), {ANIM_MS});
       else {{ animToken++; drawSingle(currentPeriod()); }}
-      periodLabel.textContent = currentPeriod();
       periodSelect.value = String(periodIndex);
     }}
 
     function stopSlideshow() {{
       if (timer) {{ clearInterval(timer); timer = null; }}
-      document.getElementById("btnPlay").textContent = "Odtwarzaj";
+      syncPlayIcon(false);
     }}
 
     function startSlideshow() {{
       stopSlideshow();
-      document.getElementById("btnPlay").textContent = "Pauza";
+      syncPlayIcon(true);
       const ms = parseInt(document.getElementById("speedRange").value, 10);
       timer = setInterval(() => {{
         if (periodIndex >= PERIODS.length - 1 && !loopEnabled) {{

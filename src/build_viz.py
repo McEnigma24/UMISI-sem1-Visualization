@@ -207,20 +207,17 @@ def chart_yearly_packed_bubbles(layout: pd.DataFrame) -> alt.Chart:
     )
 
 
-def _trend_line_labels(data: pd.DataFrame) -> pd.DataFrame:
-    last_month = data["month"].max()
-    return data[data["month"] == last_month].copy()
-
-
-def chart_trends(shares: pd.DataFrame, top_n: int = 12) -> alt.Chart:
-    order = _language_popularity_order(shares)
-    top = order[:top_n]
-    data = shares[shares["language"].isin(top)].copy()
-    labels = _trend_line_labels(data)
+def chart_trends(shares: pd.DataFrame) -> alt.Chart:
+    """Te same jezyki co wykres udzialow (LANGUAGES), legenda wg popularnosci (push_events)."""
+    data = shares[shares["language"].isin(LANGUAGES)].copy()
+    legend_order = _language_popularity_order(data)
     selection = alt.selection_point(fields=["language"], bind="legend")
-    n_langs = shares["language"].nunique()
 
-    color_enc = alt.Color("language:N", sort=top, title="Language")
+    color_enc = alt.Color(
+        "language:N",
+        sort=legend_order,
+        title="Language",
+    )
     opacity_enc = alt.condition(selection, alt.value(1), alt.value(0.15))
     lines = (
         alt.Chart(data)
@@ -234,21 +231,13 @@ def chart_trends(shares: pd.DataFrame, top_n: int = 12) -> alt.Chart:
         )
         .add_params(selection)
     )
-    text = (
-        alt.Chart(labels)
-        .mark_text(align="left", dx=6, fontSize=10, fontWeight="bold")
-        .encode(
-            x=alt.X("month:T"),
-            y=alt.Y("push_events:Q"),
-            text="language:N",
-            color=alt.Color("language:N", sort=top, legend=None),
-            opacity=opacity_enc,
-        )
-    )
-    return alt.layer(lines, text).properties(
+    return lines.properties(
         width=860,
         height=420,
-        title=f"Activity trends (top {top_n} of {n_langs} languages)",
+        title=(
+            "Activity trends — same languages as stacked share chart "
+            f"({len(legend_order)} in data)"
+        ),
     )
 
 
@@ -602,7 +591,7 @@ def write_index_html(viz_dir: Path) -> None:
 
     market_snapshot_section = """
       <section class="chart-section">
-        <h2>Mapa udzialow (slideshow kwartalny)</h2>
+        <h2>Mapa udzialow</h2>
         <div class="chart-host snapshot-iframe-host">
           <iframe id="market-snapshot-viewer" title="Mapa udzialow kwartalnych" loading="lazy" scrolling="no"></iframe>
         </div>
@@ -610,7 +599,7 @@ def write_index_html(viz_dir: Path) -> None:
 
     yearly_viewer_section = """
       <section class="chart-section wide yearly-viewer-section">
-        <h2>Kwartalny przeglad: treemap stabilny i niestabilny</h2>
+        <h2>Przeglad kwartalny treemap</h2>
         <div class="chart-host yearly-iframe-host">
           <iframe id="yearly-viewer" title="Kwartalny przeglad rynku" loading="lazy" scrolling="no"></iframe>
         </div>
@@ -618,7 +607,7 @@ def write_index_html(viz_dir: Path) -> None:
 
     concentration_section = """
       <section class="chart-section">
-        <h2>Koncentracja rynku (slideshow kwartalny)</h2>
+        <h2>Koncentracja rynku</h2>
         <div class="chart-host concentration-iframe-host">
           <iframe id="concentration-viewer" title="Koncentracja rynku kwartalna" loading="lazy" scrolling="no"></iframe>
         </div>
@@ -715,6 +704,11 @@ def write_index_html(viz_dir: Path) -> None:
       overflow-y: hidden;
       padding-bottom: 0.25rem;
     }}
+    .chart-host.yearly-iframe-host,
+    .chart-host.concentration-iframe-host {{
+      overflow-y: visible;
+      align-items: flex-start;
+    }}
     .chart-section.wide .chart-host {{
       justify-content: flex-start;
     }}
@@ -745,19 +739,20 @@ def write_index_html(viz_dir: Path) -> None:
       margin-right: auto;
     }}
     .yearly-iframe-host {{
-      height: 1040px;
-      min-height: 0;
-      overflow: hidden;
+      min-height: 360px;
+      height: auto;
+      overflow: visible;
       justify-content: center !important;
     }}
     .yearly-iframe-host iframe {{
+      display: block;
       width: 100%;
       max-width: 960px;
-      height: 1040px;
+      min-height: 360px;
+      height: 720px;
       border: none;
       border-radius: 8px;
       background: #fff;
-      overflow: hidden;
     }}
     .snapshot-iframe-host {{
       height: 600px;
@@ -775,19 +770,20 @@ def write_index_html(viz_dir: Path) -> None:
       overflow: hidden;
     }}
     .concentration-iframe-host {{
-      height: 820px;
-      min-height: 0;
-      overflow: hidden;
+      min-height: 320px;
+      height: auto;
+      overflow: visible;
       justify-content: center !important;
     }}
     .concentration-iframe-host iframe {{
+      display: block;
       width: 100%;
       max-width: 920px;
-      height: 820px;
+      min-height: 320px;
+      height: 680px;
       border: none;
       border-radius: 8px;
       background: #fff;
-      overflow: hidden;
     }}
     @media (max-width: 720px) {{
       .chart-section {{
@@ -834,6 +830,24 @@ def write_index_html(viz_dir: Path) -> None:
           view.width(available).run();
         }}
       }});
+    }});
+
+    window.addEventListener('message', function(ev) {{
+      var d = ev.data;
+      if (!d || d.type !== 'umisi-viewer-resize') return;
+      var id = d.source === 'yearly-viewer' ? 'yearly-viewer'
+        : d.source === 'concentration-viewer' ? 'concentration-viewer' : null;
+      if (!id) return;
+      var iframe = document.getElementById(id);
+      if (!iframe || d.height == null) return;
+      var pad = 24;
+      var h = Math.max(200, Math.ceil(Number(d.height)) + pad);
+      var prev = iframe.dataset.autoH ? parseFloat(iframe.dataset.autoH) : 0;
+      if (prev > 0 && Math.abs(prev - h) < 4) return;
+      iframe.dataset.autoH = String(h);
+      iframe.style.height = h + 'px';
+      var host = iframe.closest('.yearly-iframe-host, .concentration-iframe-host');
+      if (host) host.style.height = h + 'px';
     }});
 
     document.addEventListener('DOMContentLoaded', function() {{
