@@ -231,14 +231,7 @@ def chart_trends(shares: pd.DataFrame) -> alt.Chart:
         )
         .add_params(selection)
     )
-    return lines.properties(
-        width=860,
-        height=420,
-        title=(
-            "Activity trends — same languages as stacked share chart "
-            f"({len(legend_order)} in data)"
-        ),
-    )
+    return lines.properties(width=860, height=420)
 
 
 def _stacked_area_labels(data: pd.DataFrame, min_band_pct: float = 2.8) -> pd.DataFrame:
@@ -308,14 +301,7 @@ def chart_stacked_shares(shares: pd.DataFrame) -> alt.Chart:
     return (
         alt.layer(areas, text)
         .resolve_scale(x="shared", y="shared")
-        .properties(
-            width=860,
-            height=420,
-            title=(
-                f"Language shares over time — {len(LANGUAGES)} languages "
-                "(100% stacked, largest share on top)"
-            ),
-        )
+        .properties(width=860, height=420)
     )
 
 

@@ -160,7 +160,7 @@ def render_html(payload: dict) -> str:
       padding: 0.5rem 1rem 1.25rem;
     }}
     .viewer.grid-mode {{
-      max-width: min(1400px, 100%);
+      max-width: min(1680px, 100%);
     }}
     .toolbar {{
       display: flex;
@@ -169,6 +169,9 @@ def render_html(payload: dict) -> str:
       align-items: center;
       justify-content: center;
       margin-bottom: 0.5rem;
+    }}
+    .tabs.toolbar {{
+      gap: 0.5rem 0.85rem;
     }}
     .toolbar label {{ font-size: 0.9rem; color: #333; }}
     .toolbar label.toggle {{
@@ -212,18 +215,37 @@ def render_html(payload: dict) -> str:
     }}
     .grid-view {{
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
-      gap: 0.85rem;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 0.35rem 0.45rem;
       width: 100%;
       align-items: start;
+      justify-items: center;
+    }}
+    @media (max-width: 1024px) {{
+      .grid-view {{ grid-template-columns: repeat(4, minmax(0, 1fr)); }}
+      .grid-cell {{ max-width: 118px; }}
+      .grid-cell svg {{ max-width: min(100%, 96px); }}
+    }}
+    @media (max-width: 680px) {{
+      .grid-view {{ grid-template-columns: repeat(2, minmax(0, 1fr)); }}
+      .grid-cell {{ max-width: 160px; }}
+      .grid-cell svg {{ max-width: min(100%, 132px); }}
+    }}
+    @media (max-width: 380px) {{
+      .grid-view {{ grid-template-columns: 1fr; }}
     }}
     .grid-cell {{
       text-align: center;
-      font-size: 0.8rem;
+      font-size: 0.62rem;
       cursor: pointer;
-      border-radius: 8px;
-      padding: 0.35rem;
+      border-radius: 5px;
+      padding: 0.12rem;
       outline: none;
+      width: 100%;
+      max-width: 132px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
       transition: box-shadow 0.15s ease, background 0.15s ease;
     }}
     .grid-cell:hover, .grid-cell:focus-visible {{
@@ -232,17 +254,20 @@ def render_html(payload: dict) -> str:
     }}
     .grid-cell .grid-period-label {{
       font-weight: 600;
-      margin-bottom: 0.35rem;
+      margin-bottom: 0.1rem;
       color: #334155;
+      font-size: 0.58rem;
+      line-height: 1.15;
     }}
     .grid-cell svg {{
-      width: 100%;
+      width: auto;
       height: auto;
-      max-height: none;
-      border: 1px solid #e8e8e8;
-      border-radius: 6px;
-      background: #fafafa;
+      max-width: min(100%, 118px);
       display: block;
+      border: 1px solid #e5e7eb;
+      border-radius: 4px;
+      background: #fafafa;
+      margin: 0 auto;
     }}
     .grid-modal {{
       position: fixed;
@@ -376,8 +401,6 @@ def render_html(payload: dict) -> str:
     <div class="tabs toolbar" id="typeTabs">
       <button type="button" data-type="stable" class="active">Treemap stabilny</button>
       <button type="button" data-type="unstable">Treemap niestabilny</button>
-    </div>
-    <div class="toolbar" id="viewToolbar">
       <label class="toggle">
         <input type="checkbox" id="gridToggle" />
         Siatka wszystkich kwartalow

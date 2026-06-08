@@ -208,13 +208,6 @@ def render_html(payload: dict) -> str:
 </head>
 <body>
   <div class="viewer">
-    <div class="toolbar" id="topNBar">
-      <label>Top N jezykow
-        <input type="range" id="topNRange" min="1" max="{payload['max_n']}" step="1" value="3" />
-        <span id="topNVal">3</span>
-      </label>
-      <span class="share-label" id="shareLabel"></span>
-    </div>
     <div class="slideshow-rows" id="slideshowControls">
       <div class="slideshow-row slideshow-toolbar-line">
         <div class="nav-cluster">
@@ -234,6 +227,13 @@ def render_html(payload: dict) -> str:
         <button type="button" id="btnPlay" class="btn-play-icon" title="Odtwarzaj" aria-label="Odtwarzaj slideshow"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 5v14l11-7z"/></svg></button>
         <button type="button" id="btnLoop" class="btn-loop active" aria-pressed="true" title="Zapetlanie wlaczone" aria-label="Wlacz i wylacz zapetlanie slajdowa"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></button>
       </div>
+    </div>
+    <div class="toolbar" id="topNBar">
+      <label>Top N jezykow
+        <input type="range" id="topNRange" min="1" max="{payload['max_n']}" step="1" value="3" />
+        <span id="topNVal">3</span>
+      </label>
+      <span class="share-label" id="shareLabel"></span>
     </div>
     <div id="stage"></div>
     <div class="lang-panel" id="langPanel"></div>
