@@ -141,7 +141,7 @@ def run_etl(input_path: Path = RAW_INPUT) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="ETL aktywności języków GitHub",
-        epilog="Domyślny plik: RAW_INPUT z config (real BQ). Fake: --input data/raw/fake/monthly_activity_sample.csv albo UMISI_USE_FAKE_SAMPLE=1 przy run_pipeline.",
+        epilog="Domyślny plik: RAW_INPUT z config (eksport BigQuery). Inny: --input ścieżka.csv.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument(

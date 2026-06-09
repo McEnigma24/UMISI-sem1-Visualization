@@ -17,7 +17,7 @@ Pipeline ETL (`src/etl.py`) przetwarza eksport CSV o schemacie zgodnym z zapytan
 
 W eksporcie BigQuery (`sql/bigquery_export.sql`) aktywność jest **ważona wieloma językami na repo**: dla każdego `PushEvent` i języka z listy stosunek `bytes(język) / suma(bytes w repo)` — suma po kwartale daje „push-równoważne” ułamki (ETL trzyma je jako float w `push_events`).
 
-Zakres **2011 — 2026-04-01** w domyślnym pliku wejściowym (`manyLanguages_added.csv`): początek GH Archive, koniec = **ostatni kwartał w scalonym CSV** (wartość `quarter` / `month` z eksportu BQ = pierwszy dzień kwartału, tu **2026-04-01** = Q2 2026). W danych syntetycznych uwzględniono późniejsze wejście języków (np. Go od 2012, Swift od 2014, Rust od 2015).
+Zakres **2011 — 2026-04-01** w domyślnym pliku wejściowym (`manyLanguages_added.csv`): początek GH Archive, koniec = **ostatni kwartał w scalonym CSV** (wartość `quarter` / `month` z eksportu BQ = pierwszy dzień kwartału, tu **2026-04-01** = Q2 2026).
 
 ## 3. Popularność języków w czasie
 

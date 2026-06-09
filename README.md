@@ -9,7 +9,7 @@ pip install -r requirements.txt
 python src/run_pipeline.py
 ```
 
-Domyślnie ETL wczytuje **`data/raw/real/manyLanguages_added.csv`** (eksport BQ z uzupełnionymi lukami kwartalnymi — patrz niżej). Żeby przełączyć na syntetyczne dane: ustaw **`UMISI_USE_FAKE_SAMPLE=1`** przed `run_pipeline.py` (najpierw wygeneruje `data/raw/fake/monthly_activity_sample.csv`), albo uruchom `python src/etl.py --input data/raw/fake/monthly_activity_sample.csv` i dalsze kroki ręcznie.
+Domyślnie ETL wczytuje **`data/raw/real/manyLanguages_added.csv`** (eksport BQ z uzupełnionymi lukami kwartalnymi — patrz niżej). Aby użyć innego eksportu: `python src/etl.py --input ścieżka.csv` i dalsze kroki pipeline’u.
 
 **Luka 2013–2014 w surowym eksporcie:** jeśli plik z BigQuery ma skok z 2012 do 2015, to zwykle nie wynika z „braku GitHuba”, tylko z eksportu (węższy zakres `_TABLE_SUFFIX`, błąd w zapytaniu, scalenie dwóch częściowych wyników, inny dataset). W tabeli `githubarchive.day.20*` sufiksy `130*` i `140*` **powinny** wpaść w filtr `BETWEEN '110101' AND '241231'` — warto w BQ sprawdzić `INFORMATION_SCHEMA.TABLES` lub `COUNT(*)` pogrupowane po roku. Żeby wykresy nie miały dziury czasowej, można uzupełnić brakujące kwartały interpolacją liniową:
 
@@ -51,25 +51,24 @@ Projekt **nie** trzyma gotowych wykresów w repozytorium jako jedynego źródła
 
 | Krok | Skrypt | Co robi |
 |------|--------|---------|
-| 1 | *(opcjonalnie)* `generate_sample_data.py` | Tylko jeśli ustawisz **`UMISI_USE_FAKE_SAMPLE=1`**: nadpisuje **`data/raw/fake/monthly_activity_sample.csv`**. |
-| 2 | `etl.py` | Domyślnie czyta **`data/raw/real/manyLanguages_added.csv`** (prawdziwy eksport BQ / interpolowane kwartały). Fake: zmienna `UMISI_USE_FAKE_SAMPLE=1` albo `python src/etl.py --input data/raw/fake/monthly_activity_sample.csv`. |
-| 3 | `build_vectors.py` | Buduje długi format wektorów (`language_vectors.csv`) — baza pod profile i redukcję wymiaru. |
-| 4 | `dim_reduction.py` | Z macierzy profili (udziały w czasie, `log1p` + standaryzacja) liczy **siedem metod** w **2D** i **3D** → `dim_reduction.csv`, `dim_reduction_3d.csv`. |
-| 5 | `eda.py` | Statystyki per język, klastry KMeans, wykładnicza wariancja PCA, `language_profiles.csv` itd. |
-| 6 | `build_viz.py` | **Główny generator wykresów:** Altair → **Vega-Lite** (`*.vl.json`), Plotly → `dim_reduction_3d.spec.json` + wbudowanie 3D w `index.html` + opcjonalnie `dim_reduction_3d.html`, kopiuje CSV do `viz/data/`, składa **`index.html`** z JSON-ami Vega i iframe’ami viewerów. |
-| 7 | `build_yearly_viewer.py` | Osobna strona **rocznego** podglądu (treemap / siatka), ładowana w iframe z dashboardu. |
-| 8 | `build_market_snapshot_viewer.py` | Strona **mapy udziałów** (kwartalna „mapa”), iframe. |
-| 9 | `build_concentration_viewer.py` | Strona **koncentracji rynku**, iframe. |
+| 1 | `etl.py` | Czyta **`data/raw/real/manyLanguages_added.csv`** (eksport BQ / interpolowane kwartały); inny plik: `python src/etl.py --input ścieżka.csv`. |
+| 2 | `build_vectors.py` | Buduje długi format wektorów (`language_vectors.csv`) — baza pod profile i redukcję wymiaru. |
+| 3 | `dim_reduction.py` | Z macierzy profili (udziały w czasie, `log1p` + standaryzacja) liczy **siedem metod** w **2D** i **3D** → `dim_reduction.csv`, `dim_reduction_3d.csv`. |
+| 4 | `eda.py` | Statystyki per język, klastry KMeans, wykładnicza wariancja PCA, `language_profiles.csv` itd. |
+| 5 | `build_viz.py` | **Główny generator wykresów:** Altair → **Vega-Lite** (`*.vl.json`), Plotly → `dim_reduction_3d.spec.json` + wbudowanie 3D w `index.html` + opcjonalnie `dim_reduction_3d.html`, kopiuje CSV do `viz/data/`, składa **`index.html`** z JSON-ami Vega i iframe’ami viewerów. |
+| 6 | `build_yearly_viewer.py` | Osobna strona **rocznego** podglądu (treemap / siatka), ładowana w iframe z dashboardu. |
+| 7 | `build_market_snapshot_viewer.py` | Strona **mapy udziałów** (kwartalna „mapa”), iframe. |
+| 8 | `build_concentration_viewer.py` | Strona **koncentracji rynku**, iframe. |
 
-**Źródło danych:** domyślnie `data/raw/real/manyLanguages_added.csv`. **Syntetyczne:** `UMISI_USE_FAKE_SAMPLE=1 python src/run_pipeline.py` (Windows PowerShell: `$env:UMISI_USE_FAKE_SAMPLE="1"; python src/run_pipeline.py`) albo `python src/etl.py --input data/raw/fake/monthly_activity_sample.csv`.
+**Źródło danych:** domyślnie `data/raw/real/manyLanguages_added.csv` (eksport BigQuery).
 
-Własny eksport BigQuery: zapisz CSV do `data/raw/real/`, ustaw ścieżkę w `src/config.py` (`RAW_INPUT_REAL`) albo `python src/etl.py --input ścieżka.csv`, potem **kroki 3–9** (albo cały `run_pipeline.py` bez fake).
+Własny eksport BigQuery: zapisz CSV do `data/raw/real/`, ustaw ścieżkę w `src/config.py` (`RAW_INPUT_REAL`) albo `python src/etl.py --input ścieżka.csv`, potem **kroki 2–8** (albo cały `run_pipeline.py`).
 
 ### Jak dokładnie powstają wizualizacje
 
 - **Wykresy Vega-Lite (większość dashboardu):** `build_viz.py` buduje obiekty **Altair**, zapisuje je jako `viz/*.vl.json`. W `index.html` każda specyfikacja jest w tagu `<script type="application/json">`, a **vega-embed** (ładowany z CDN) renderuje ją w `<div id="chart-…">`. Dzięki temu wykresy są interaktywne (tooltip, zoom tam gdzie zdefiniowano) bez osobnego serwera aplikacji.
 - **Wykres 3D:** `build_viz.py` czyta `dim_reduction_3d.csv`, buduje figurę Plotly, zapisuje **`viz/dim_reduction_3d.spec.json`** (JSON figury) i **`viz/dim_reduction_3d.html`** (samodzielny plik z dołączonym Plotly). W **`index.html`** wykres 3D jest **renderowany w tej samej stronie** (dekodowany ze specyfikacji w base64), żeby działało też przy otwarciu `index.html` z dysku (`file://` — zagnieżdżone iframe z lokalnymi plikami bywa blokowane).
-- **Trzy „viewery” HTML:** osobne skrypty (kroki 7–9) generują samodzielne strony z własnym layoutem i często **postMessage** do dopasowania wysokości iframe — to nadal **generowane pliki**, nie ręcznie pisany front produkcyjny.
+- **Trzy „viewery” HTML:** osobne skrypty (kroki 6–8) generują samodzielne strony z własnym layoutem i często **postMessage** do dopasowania wysokości iframe — to nadal **generowane pliki**, nie ręcznie pisany front produkcyjny.
 
 Jeśli zmienisz wyłącznie kod wykresów w `build_viz.py` / viewerach, wystarczy ponownie uruchomić **`build_viz.py`** (i ewentualnie pojedyncze `build_*_viewer.py`). Jeśli zmieniłeś **`dim_reduction.py`** lub dane wejściowe do embeddingów, uruchom ponownie **`dim_reduction.py`**, potem **`eda.py`** (profile używają współrzędnych PCA z CSV) i na końcu **`build_viz.py`** oraz buildery viewerów.
 
@@ -86,7 +85,7 @@ report.md       # interpretacja wyników
 
 ## Skrót: same pliki skryptów
 
-- Dane: *(opcjonalnie `generate_sample_data.py` przy fake)* → `etl.py` → `build_vectors.py` → `dim_reduction.py` → `eda.py`
+- Dane: `etl.py` → `build_vectors.py` → `dim_reduction.py` → `eda.py`
 - Widok: `build_viz.py` + `build_yearly_viewer.py` + `build_market_snapshot_viewer.py` + `build_concentration_viewer.py`
 
 ## Wymagania zadania

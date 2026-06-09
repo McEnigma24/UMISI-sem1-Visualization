@@ -1,9 +1,10 @@
 \documentclass[11pt,a4paper]{article}
 
-% ===== Silnik: tectonic / XeTeX =====
-\usepackage{fontspec}
-\usepackage{polyglossia}
-\setdefaultlanguage{polish}
+% ===== Kompatybilne z pdflatex (i XeLaTeX) =====
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[polish]{babel}
+\usepackage{lmodern}
 
 \usepackage{amsmath}
 \usepackage{amssymb}
@@ -27,7 +28,8 @@
 \large Ewolucja ekosystemów języków programowania na GitHubie (2011--2026)}
 \author{Mateusz Lampert, Wojciech Maćkowiak\\[0.4em]
 Projekt UMISI --- Grupa 1 (projekty dziedzinowe i aplikacyjne)\\
-Temat 5: Ewolucja ekosystemów języków programowania}
+Temat 5: Ewolucja ekosystemów języków programowania\\[0.4em]
+\normalsize Repozytorium: \url{https://github.com/McEnigma24/UMISI-sem1-Visualization}}
 \date{\today}
 
 \begin{document}
@@ -145,8 +147,7 @@ Potok \texttt{src/etl.py}:
 niespójny --- np. skok z~2012 do~2015. Aby wykresy nie miały dziury czasowej, brakujące
 kwartały uzupełniono \textbf{interpolacją liniową} skryptem
 \texttt{src/interpolate\_quarter\_gaps.py}; domyślnym wejściem ETL jest plik wynikowy
-\texttt{data/raw/real/manyLanguages\_added.csv}. Dostępny jest też tryb syntetyczny
-(\texttt{UMISI\_USE\_FAKE\_SAMPLE=1}) generujący dane miesięczne do testów potoku.
+\texttt{data/raw/real/manyLanguages\_added.csv}.
 
 Pliki pośrednie (\texttt{data/processed/}) obejmują m.in. \texttt{monthly\_activity.csv},
 \texttt{monthly\_shares.csv}, \texttt{community\_metrics.csv},
@@ -167,15 +168,14 @@ wykonuje kolejne kroki potoku i~składa dashboard \texttt{index.html}.
 \toprule
 \textbf{Krok} & \textbf{Skrypt} & \textbf{Zadanie} \\
 \midrule
-1 & \texttt{generate\_sample\_data.py} & (opcjonalnie) dane syntetyczne, gdy \texttt{UMISI\_USE\_FAKE\_SAMPLE=1} \\
-2 & \texttt{etl.py} & wczytanie i~filtrowanie danych, udziały, metryki, koncentracja \\
-3 & \texttt{build\_vectors.py} & długi format wektorów cech (profil czasowy języka) \\
-4 & \texttt{dim\_reduction.py} & 7 metod redukcji wymiaru w~2D i~3D \\
-5 & \texttt{eda.py} & statystyki per język, klastry $k$-means, wariancja PCA, profile \\
-6 & \texttt{build\_viz.py} & główny generator: Altair $\rightarrow$ Vega-Lite, Plotly 3D, montaż \texttt{index.html} \\
-7 & \texttt{build\_yearly\_viewer.py} & strona rocznego podglądu (treemap / siatka) \\
-8 & \texttt{build\_market\_snapshot\_viewer.py} & strona mapy udziałów (kwartalna) \\
-9 & \texttt{build\_concentration\_viewer.py} & strona koncentracji rynku \\
+1 & \texttt{etl.py} & wczytanie i~filtrowanie danych, udziały, metryki, koncentracja \\
+2 & \texttt{build\_vectors.py} & długi format wektorów cech (profil czasowy języka) \\
+3 & \texttt{dim\_reduction.py} & 7 metod redukcji wymiaru w~2D i~3D \\
+4 & \texttt{eda.py} & statystyki per język, klastry $k$-means, wariancja PCA, profile \\
+5 & \texttt{build\_viz.py} & główny generator: Altair $\rightarrow$ Vega-Lite, Plotly 3D, montaż \texttt{index.html} \\
+6 & \texttt{build\_yearly\_viewer.py} & strona rocznego podglądu (treemap / siatka) \\
+7 & \texttt{build\_market\_snapshot\_viewer.py} & strona mapy udziałów (kwartalna) \\
+8 & \texttt{build\_concentration\_viewer.py} & strona koncentracji rynku \\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -394,9 +394,10 @@ python src/run_pipeline.py
 # następnie otwórz index.html w przeglądarce
 \end{verbatim}
 
-Seed losowości: \texttt{42} (\texttt{src/config.py}). Domyślnym wejściem ETL jest
-\texttt{data/raw/real/manyLanguages\_added.csv}; tryb syntetyczny: zmienna środowiskowa
-\texttt{UMISI\_USE\_FAKE\_SAMPLE=1}.
+Domyślnym wejściem ETL jest \texttt{data/raw/real/manyLanguages\_added.csv} (eksport BigQuery);
+inny plik: \texttt{python src/etl.py -{}-input ścieżka.csv}. Wyniki metod stochastycznych
+(klastrowanie $k$-means, t-SNE, UMAP itd.) są powtarzalne dzięki ustalonemu ziarnu
+\texttt{RANDOM\_SEED = 42} w~\texttt{src/config.py}.
 
 \paragraph{Zgodność z wymaganiami Grupy~1.} Dashboard interaktywny (\texttt{index.html}),
 EDA i~wnioski (\texttt{src/eda.py}), opis źródła i~preprocessingu (\texttt{data/README.md},

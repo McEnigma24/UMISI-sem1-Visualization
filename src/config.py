@@ -1,7 +1,6 @@
 """Centralna konfiguracja projektu."""
 
 from pathlib import Path
-import os
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA_RAW = ROOT / "data" / "raw"
@@ -69,13 +68,9 @@ LANGUAGE_COLORS = {
     lang: LANGUAGE_PALETTE[i % len(LANGUAGE_PALETTE)] for i, lang in enumerate(LANGUAGES)
 }
 
-# Domyślnie eksport BigQuery (kwartalny). Syntetyczne: ustaw UMISI_USE_FAKE_SAMPLE=1 albo:
-#   python src/etl.py --input data/raw/fake/monthly_activity_sample.csv
+# Wejście ETL: eksport BigQuery (kwartalny) z uzupełnionymi lukami.
 RAW_INPUT_REAL = DATA_RAW / "real" / "manyLanguages_added.csv"
-RAW_INPUT_FAKE = DATA_RAW / "fake" / "monthly_activity_sample.csv"
-
-USE_FAKE_SAMPLE_RAW = os.environ.get("UMISI_USE_FAKE_SAMPLE", "").strip().lower() in ( "1", "true", "yes",)
-RAW_INPUT = RAW_INPUT_FAKE if USE_FAKE_SAMPLE_RAW else RAW_INPUT_REAL
+RAW_INPUT = RAW_INPUT_REAL
 PROCESSED_MONTHLY = DATA_PROCESSED / "monthly_activity.csv"
 PROCESSED_SHARES = DATA_PROCESSED / "monthly_shares.csv"
 PROCESSED_COMMUNITY = DATA_PROCESSED / "community_metrics.csv"

@@ -6,7 +6,6 @@
 |---------|------|
 | `raw/real/manyLanguages.csv` | Surowy eksport BQ (kwartały); może mieć luki czasowe (np. brak 2013–2014) |
 | `raw/real/manyLanguages_added.csv` | **Domyślne wejście ETL:** ten sam schemat po **`interpolate_quarter_gaps.py`** (wypełnienie brakujących kwartałów interpolacją liniową) |
-| `raw/fake/monthly_activity_sample.csv` | Syntetyczne dane miesięczne (`month`, …) — generator `generate_sample_data.py` |
 | Surowy eksport z BQ ([`sql/bigquery_export.sql`](../sql/bigquery_export.sql)) | Możesz podmienić plik w `raw/real/` i zaktualizować `RAW_INPUT_REAL` w `src/config.py` albo użyć `etl.py --input …`. Uzupełnienia czasowe: [`sql/bigquery_export_2012_2015.sql`](../sql/bigquery_export_2012_2015.sql), [`sql/bigquery_export_2025_2026.sql`](../sql/bigquery_export_2025_2026.sql). |
 | `processed/monthly_activity.csv` | Zagregowane liczniki per język (nadal jedna kolumna czasu `month` w pliku — miesiąc lub początek kwartału) |
 | `processed/monthly_shares.csv` | Udziały (`share`, `share_pct`) w aktywności miesięcznej |
@@ -32,7 +31,7 @@ Alternatywa z BigQuery (kwartały): pierwsza kolumna może nazywać się **`quar
 
 - **month** / **quarter** — oś czasu (miesiąc `YYYY-MM` albo początek kwartału); przy `quarter` ETL zapisuje dalej jako `month` w plikach processed
 - **language** — nazwa języka z pola `repo.language`
-- **push_events** — liczba zdarzeń `PushEvent` (**ważone** w eksporcie BQ: suma `bytes_lang / sum(bytes_repo)` na push; może być niecałkowita) albo całkowita w pliku fake
+- **push_events** — liczba zdarzeń `PushEvent` (**ważone** w eksporcie BQ: suma `bytes_lang / sum(bytes_repo)` na push; może być niecałkowita)
 - **unique_actors** — liczba unikalnych `actor.id`
 
 Dłuższa interpretacja **trendów absolutnych** (ważone `push_events`, skok ok. 2015, lata 2021–2026 vs narracja „COVID”): [../report.md](../report.md) (sekcja 3.1).
@@ -44,7 +43,7 @@ pip install -r requirements.txt
 python src/run_pipeline.py
 ```
 
-Domyślnie ETL bierze **`data/raw/real/manyLanguages_added.csv`**. Żeby **syntetyczne** dane: `UMISI_USE_FAKE_SAMPLE=1 python src/run_pipeline.py` (najpierw generator fake), albo `python src/etl.py --input data/raw/fake/monthly_activity_sample.csv` i kolejne kroki pipeline’u.
+Domyślnie ETL bierze **`data/raw/real/manyLanguages_added.csv`** (eksport BigQuery). Inny plik wejściowy: `python src/etl.py --input ścieżka.csv` i kolejne kroki pipeline’u.
 
 Z własnym eksportem BigQuery:
 
