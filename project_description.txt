@@ -7,6 +7,8 @@ W ramach projektu należy przygotować interaktywną wizualizację lub dashboard
 
 
 
+
+
 5. Ewolucja ekosystemów języków programowania
 Cel projektu:
 Celem projektu jest pokazanie zmian popularności języków programowania i technologii w czasie.
@@ -22,7 +24,6 @@ porównanie aktywności społeczności,
 przygotowanie interaktywnych wykresów trendów,
 analiza zmian dominujących technologii,
 interpretacja wyników.
-
 Element związany z redukcją wymiaru:
 Należy przygotować wektory aktywności języków lub repozytoriów i porównać wyniki UMAP, TriMAP lub PaCMAP.
 

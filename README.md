@@ -103,5 +103,3 @@ report.md       # interpretacja wyników
 | Redukcja wymiaru | `viz/dim_reduction.vl.json` (panel pod panelem, etykiety na punktach) |
 | Klastrowanie / outliers | `viz/clusters.vl.json`, `language_profiles.csv` |
 | Grupa 1 — checklist | `docs/grupa1_checklist.md` |
-
-Szczegóły: [project/task.txt](project/task.txt).
