@@ -10,7 +10,7 @@ import pandas as pd
 
 from config import DATA_RAW, END_MONTH, LANGUAGES, RANDOM_SEED, START_MONTH
 
-# Profile inspirowane trendami GitHub (2011-2024). since = pierwszy sensowny miesiac na platformie.
+# Profile inspirowane trendami GitHub (2011-2026). since = pierwszy sensowny miesiac na platformie.
 LANGUAGE_PROFILES: dict[str, dict] = {
     "JavaScript": {"base": 0.18, "trend": 0.003, "season": 0.02, "since": "2011-01"},
     "Python": {"base": 0.13, "trend": 0.005, "season": 0.015, "since": "2011-01"},
@@ -109,9 +109,10 @@ def generate_monthly_activity() -> pd.DataFrame:
 
 
 def main() -> None:
-    DATA_RAW.mkdir(parents=True, exist_ok=True)
+    out_dir = DATA_RAW / "fake"
+    out_dir.mkdir(parents=True, exist_ok=True)
     df = generate_monthly_activity()
-    out = DATA_RAW / "monthly_activity_sample.csv"
+    out = out_dir / "monthly_activity_sample.csv"
     df.to_csv(out, index=False)
     print(f"Saved {len(df)} rows to {out}")
 

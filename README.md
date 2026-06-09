@@ -1,6 +1,6 @@
 # UMISI — Ewolucja ekosystemów języków programowania
 
-Interaktywny **dashboard** (Grupa 1 UMISI): trendy, EDA, klastrowanie, redukcja wymiaru (PCA, kernel PCA, t-SNE, UMAP, TriMAP, PaCMAP, OpenTSNE) — popularność języków na GitHubie (2011–2024).
+Interaktywny **dashboard** (Grupa 1 UMISI): trendy, EDA, klastrowanie, redukcja wymiaru (PCA, kernel PCA, t-SNE, UMAP, TriMAP, PaCMAP, OpenTSNE) — popularność języków na GitHubie (2011–2026, ostatni kwartał w danych: 2026-04-01).
 
 ## Szybki start
 
@@ -9,13 +9,23 @@ pip install -r requirements.txt
 python src/run_pipeline.py
 ```
 
-Na Windows przy błędzie SSL podczas `pip install`:
+Domyślnie ETL wczytuje **`data/raw/real/manyLanguages_added.csv`** (eksport BQ z uzupełnionymi lukami kwartalnymi — patrz niżej). Żeby przełączyć na syntetyczne dane: ustaw **`UMISI_USE_FAKE_SAMPLE=1`** przed `run_pipeline.py` (najpierw wygeneruje `data/raw/fake/monthly_activity_sample.csv`), albo uruchom `python src/etl.py --input data/raw/fake/monthly_activity_sample.csv` i dalsze kroki ręcznie.
+
+**Luka 2013–2014 w surowym eksporcie:** jeśli plik z BigQuery ma skok z 2012 do 2015, to zwykle nie wynika z „braku GitHuba”, tylko z eksportu (węższy zakres `_TABLE_SUFFIX`, błąd w zapytaniu, scalenie dwóch częściowych wyników, inny dataset). W tabeli `githubarchive.day.20*` sufiksy `130*` i `140*` **powinny** wpaść w filtr `BETWEEN '110101' AND '241231'` — warto w BQ sprawdzić `INFORMATION_SCHEMA.TABLES` lub `COUNT(*)` pogrupowane po roku. Żeby wykresy nie miały dziury czasowej, można uzupełnić brakujące kwartały interpolacją liniową:
+
+```bash
+python src/interpolate_quarter_gaps.py --input data/raw/real/manyLanguages.csv --output data/raw/real/manyLanguages_added.csv
+```
+
+(albo `--input` / `--output` wskazujące na ten sam plik `_added`, jeśli edytujesz go w miejscu).
 
 ```bash
 pip install --trusted-host pypi.org --trusted-host files.pythonhosted.org -r requirements.txt
 ```
 
 Następnie otwórz [`index.html`](index.html) w przeglądarce (dwuklik — specyfikacje wykresów są wbudowane w HTML).
+
+**Interpretacja trendów aktywności** (skok ok. 2015, pik 2021–2023 vs COVID, spadek po 2023): [report.md — §3.1](report.md) („Trendy aktywnosci — co mierzymy…”).
 
 Alternatywnie lokalny serwer (gdy przeglądarka blokuje skrypty z CDN):
 
@@ -32,7 +42,7 @@ Projekt **nie** trzyma gotowych wykresów w repozytorium jako jedynego źródła
 
 ### Przepływ danych (idea)
 
-1. **Wejście:** miesięczna aktywność per język (`push_events`, `unique_actors`) — przykładowo z [`sql/bigquery_export.sql`](sql/bigquery_export.sql) albo wbudowany generator.
+1. **Wejście:** aktywność per język (`push_events`, `unique_actors`) — przykładowo z [`sql/bigquery_export.sql`](sql/bigquery_export.sql) (**kwartały**) albo wbudowany generator (**miesiące**).
 2. **Przetwarzanie:** filtr wybranych języków, udziały procentowe, metryki rynku i społeczności, wektory profili czasowych.
 3. **Analityka:** EDA (outliery, klastry, wariancja PCA), redukcja wymiaru 2D i 3D.
 4. **Wyjście wizualne:** Vega-Lite (JSON) + kilka statycznych stron HTML w **iframe** + **Plotly 3D** osadzony w tym samym `index.html` (bez iframe), scalone w dashboard.
@@ -41,8 +51,8 @@ Projekt **nie** trzyma gotowych wykresów w repozytorium jako jedynego źródła
 
 | Krok | Skrypt | Co robi |
 |------|--------|---------|
-| 1 | `generate_sample_data.py` | Zapisuje **przykładowy** `data/raw/monthly_activity_sample.csv` (offline, deterministyczny seed). Przy każdym uruchomieniu **nadpisuje** ten plik. Dane z BQ wczytuj przez `etl.py --input …` albo podmień plik w `data/raw/` zgodnie z [`data/README.md`](data/README.md). |
-| 2 | `etl.py` | Czyta raw, zapisuje m.in. `monthly_activity.csv`, `monthly_shares.csv`, `community_metrics.csv`, `market_concentration.csv` w `data/processed/`. |
+| 1 | *(opcjonalnie)* `generate_sample_data.py` | Tylko jeśli ustawisz **`UMISI_USE_FAKE_SAMPLE=1`**: nadpisuje **`data/raw/fake/monthly_activity_sample.csv`**. |
+| 2 | `etl.py` | Domyślnie czyta **`data/raw/real/manyLanguages_added.csv`** (prawdziwy eksport BQ / interpolowane kwartały). Fake: zmienna `UMISI_USE_FAKE_SAMPLE=1` albo `python src/etl.py --input data/raw/fake/monthly_activity_sample.csv`. |
 | 3 | `build_vectors.py` | Buduje długi format wektorów (`language_vectors.csv`) — baza pod profile i redukcję wymiaru. |
 | 4 | `dim_reduction.py` | Z macierzy profili (udziały w czasie, `log1p` + standaryzacja) liczy **siedem metod** w **2D** i **3D** → `dim_reduction.csv`, `dim_reduction_3d.csv`. |
 | 5 | `eda.py` | Statystyki per język, klastry KMeans, wykładnicza wariancja PCA, `language_profiles.csv` itd. |
@@ -51,7 +61,9 @@ Projekt **nie** trzyma gotowych wykresów w repozytorium jako jedynego źródła
 | 8 | `build_market_snapshot_viewer.py` | Strona **mapy udziałów** (kwartalna „mapa”), iframe. |
 | 9 | `build_concentration_viewer.py` | Strona **koncentracji rynku**, iframe. |
 
-Własne dane z BigQuery: zapisz eksport do `data/raw/`, potem `python src/etl.py --input ścieżka.csv` i **kroki 3–9** (albo cały `run_pipeline.py` po podmianie pliku raw).
+**Źródło danych:** domyślnie `data/raw/real/manyLanguages_added.csv`. **Syntetyczne:** `UMISI_USE_FAKE_SAMPLE=1 python src/run_pipeline.py` (Windows PowerShell: `$env:UMISI_USE_FAKE_SAMPLE="1"; python src/run_pipeline.py`) albo `python src/etl.py --input data/raw/fake/monthly_activity_sample.csv`.
+
+Własny eksport BigQuery: zapisz CSV do `data/raw/real/`, ustaw ścieżkę w `src/config.py` (`RAW_INPUT_REAL`) albo `python src/etl.py --input ścieżka.csv`, potem **kroki 3–9** (albo cały `run_pipeline.py` bez fake).
 
 ### Jak dokładnie powstają wizualizacje
 
@@ -74,7 +86,7 @@ report.md       # interpretacja wyników
 
 ## Skrót: same pliki skryptów
 
-- Dane: `generate_sample_data.py` → `etl.py` → `build_vectors.py` → `dim_reduction.py` → `eda.py`
+- Dane: *(opcjonalnie `generate_sample_data.py` przy fake)* → `etl.py` → `build_vectors.py` → `dim_reduction.py` → `eda.py`
 - Widok: `build_viz.py` + `build_yearly_viewer.py` + `build_market_snapshot_viewer.py` + `build_concentration_viewer.py`
 
 ## Wymagania zadania

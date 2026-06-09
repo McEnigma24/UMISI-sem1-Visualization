@@ -42,6 +42,28 @@ def _save_chart(chart: alt.Chart, path: Path) -> None:
     print(f"Saved {path.name}")
 
 
+def _time_axis_is_quarterly(month_ts: pd.Series) -> bool:
+    """True, gdy punkty na osi to wyłącznie początki kwartałów (np. eksport BQ po kwartałach)."""
+    t = pd.to_datetime(month_ts)
+    if t.empty:
+        return False
+    return bool((t.dt.day == 1).all() and t.dt.month.isin([1, 4, 7, 10]).all())
+
+
+def _time_axis_title(month_ts: pd.Series) -> str:
+    return "Quarter" if _time_axis_is_quarterly(month_ts) else "Month"
+
+
+def _time_bucket_labels(month_ts: pd.Series) -> pd.Series:
+    """Etykiety suwaka/tooltip: YYYY-Qn przy danych kwartalnych, inaczej YYYY-MM."""
+    t = pd.to_datetime(month_ts)
+    if _time_axis_is_quarterly(t):
+        return t.dt.to_period("Q").astype(str).str.replace(
+            r"(\d{4})Q(\d)", r"\1-Q\2", regex=True
+        )
+    return t.dt.strftime("%Y-%m")
+
+
 def _language_popularity_order(shares: pd.DataFrame, descending: bool = True) -> list[str]:
     """Kolejnosc jezykow wg lacznej liczby PushEvent (domyslnie: najpopularniejszy pierwszy)."""
     return (
@@ -217,6 +239,7 @@ def chart_yearly_packed_bubbles(layout: pd.DataFrame) -> alt.Chart:
 def chart_trends(shares: pd.DataFrame) -> alt.Chart:
     """Te same jezyki co wykres udzialow (LANGUAGES), legenda wg popularnosci (push_events)."""
     data = shares[shares["language"].isin(LANGUAGES)].copy()
+    x_title = _time_axis_title(data["month"])
     legend_order = _language_popularity_order(data)
     selection = alt.selection_point(fields=["language"], bind="legend")
 
@@ -230,7 +253,7 @@ def chart_trends(shares: pd.DataFrame) -> alt.Chart:
         alt.Chart(data)
         .mark_line(point=True)
         .encode(
-            x=alt.X("month:T", title="Month"),
+            x=alt.X("month:T", title=x_title),
             y=alt.Y("push_events:Q", title="PushEvent count"),
             color=color_enc,
             opacity=opacity_enc,
@@ -267,6 +290,7 @@ def _stacked_area_labels(data: pd.DataFrame, min_band_pct: float = 2.8) -> pd.Da
 
 def chart_stacked_shares(shares: pd.DataFrame) -> alt.Chart:
     data = shares[shares["language"].isin(LANGUAGES)].copy()
+    x_title = _time_axis_title(data["month"])
     legend_order = _language_popularity_order(data)
     totals = data.groupby("language")["push_events"].sum()
     pop_rank = totals.rank(ascending=False, method="first")
@@ -278,7 +302,7 @@ def chart_stacked_shares(shares: pd.DataFrame) -> alt.Chart:
         alt.Chart(data)
         .mark_area()
         .encode(
-            x=alt.X("month:T", title="Month"),
+            x=alt.X("month:T", title=x_title),
             y=alt.Y(
                 "share_pct:Q",
                 stack="zero",
@@ -299,7 +323,7 @@ def chart_stacked_shares(shares: pd.DataFrame) -> alt.Chart:
             fontWeight="bold",
         )
         .encode(
-            x=alt.X("month:T", title="Month"),
+            x=alt.X("month:T", title=x_title),
             y=alt.Y("y_center:Q", scale=pct_scale, axis=None),
             text="language:N",
             color=alt.value("#111111"),
@@ -314,16 +338,18 @@ def chart_stacked_shares(shares: pd.DataFrame) -> alt.Chart:
 
 def chart_treemap(shares: pd.DataFrame) -> alt.Chart:
     data = shares[shares["language"].isin(LANGUAGES)].copy()
+    period_title = _time_axis_title(data["month"])
     months = sorted(data["month"].unique())
     month_to_idx = {m: i for i, m in enumerate(months)}
     data["month_idx"] = data["month"].map(month_to_idx).astype(int)
-    data["month_label"] = data["month"].dt.strftime("%Y-%m")
+    data["month_label"] = _time_bucket_labels(data["month"])
 
     n_months = len(months)
     last_idx = n_months - 1
     chart_h = max(420, data["language"].nunique() * 22)
-    first_label = pd.Timestamp(months[0]).strftime("%Y-%m")
-    last_label = pd.Timestamp(months[-1]).strftime("%Y-%m")
+    edge_labels = _time_bucket_labels(pd.Series(months, dtype="datetime64[ns]"))
+    first_label = edge_labels.iloc[0]
+    last_label = edge_labels.iloc[-1]
 
     month_slider = alt.param(
         name="month_idx",
@@ -333,7 +359,7 @@ def chart_treemap(shares: pd.DataFrame) -> alt.Chart:
             min=0,
             max=last_idx,
             step=1,
-            name=f"Miesiac ({first_label} - {last_label})",
+            name=f"{period_title} ({first_label} – {last_label})",
         ),
     )
 
@@ -357,18 +383,19 @@ def chart_treemap(shares: pd.DataFrame) -> alt.Chart:
         .properties(
             width=700,
             height=chart_h,
-            title=f"Market snapshot ({len(LANGUAGES)} languages) — suwak miesiaca",
+            title=f"Market snapshot ({len(LANGUAGES)} languages) — suwak okresu",
         )
     )
 
 
 def chart_bump(community: pd.DataFrame) -> alt.Chart:
     data = community.copy()
+    x_title = _time_axis_title(data["month"])
     return (
         alt.Chart(data)
         .mark_line(point=True)
         .encode(
-            x=alt.X("month:T", title="Month"),
+            x=alt.X("month:T", title=x_title),
             y=alt.Y(
                 "actor_rank:Q",
                 title="Rank by unique actors",
@@ -390,16 +417,27 @@ def chart_community(community: pd.DataFrame, top_n: int = 12) -> alt.Chart:
     )
     data = community[community["language"].isin(top)].copy()
     selection = alt.selection_point(fields=["language"], bind="legend")
+    x_title = _time_axis_title(data["month"])
 
     bars = (
         alt.Chart(data)
         .mark_bar()
         .encode(
-            x=alt.X("month:T", title="Month"),
-            y=alt.Y("unique_actors:Q", title="Unique actors"),
+            x=alt.X("month:T", title=x_title),
+            y=alt.Y(
+                "actors_stack:Q",
+                title="Unique actors (est. where count missing)",
+            ),
             color=alt.Color("language:N", title="Language"),
             opacity=alt.condition(selection, alt.value(0.9), alt.value(0.2)),
-            tooltip=["month", "language", "unique_actors", "events_per_actor"],
+            tooltip=[
+                "month",
+                "language",
+                alt.Tooltip("unique_actors:Q", title="unique_actors (raw)"),
+                alt.Tooltip("actors_stack:Q", title="actors (chart)"),
+                alt.Tooltip("push_events:Q", format=".0f"),
+                alt.Tooltip("events_per_actor:Q", format=".2f", title="events/actor (raw)"),
+            ],
         )
         .add_params(selection)
     )
@@ -409,14 +447,26 @@ def chart_community(community: pd.DataFrame, top_n: int = 12) -> alt.Chart:
         .mark_line(color="black", strokeDash=[4, 4])
         .encode(
             x="month:T",
-            y=alt.Y("mean(events_per_actor):Q", title="Mean events per actor"),
+            y=alt.Y(
+                "mean(events_per_actor_viz):Q",
+                title="Mean events per actor",
+            ),
         )
     )
 
     return (
         alt.layer(bars, line)
         .resolve_scale(y="independent")
-        .properties(width=800, height=420, title="Community activity and intensity")
+        .properties(
+            width=800,
+            height=420,
+            title=alt.TitleParams(
+                text="Community activity and intensity",
+                subtitle="Bars use estimated unique actors when export had actors=0 but pushes>0 (e.g. 2012–2015).",
+                subtitleFontSize=11,
+                subtitleColor="#555",
+            ),
+        )
     )
 
 
@@ -439,6 +489,9 @@ def build_topn_concentration(shares: pd.DataFrame) -> pd.DataFrame:
 
 def chart_concentration(shares: pd.DataFrame) -> alt.Chart:
     data = build_topn_concentration(shares)
+    x_title = _time_axis_title(
+        pd.to_datetime(data["month"]) if len(data) else pd.Series(dtype="datetime64[ns]")
+    )
     max_n = len(LANGUAGES)
     top_n_param = alt.param(
         name="top_n",
@@ -456,7 +509,7 @@ def chart_concentration(shares: pd.DataFrame) -> alt.Chart:
         .transform_filter(alt.datum.top_n == top_n_param)
         .mark_line(point=True, color="#c44e52")
         .encode(
-            x=alt.X("month:T", title="Month"),
+            x=alt.X("month:T", title=x_title),
             y=alt.Y("top_n_share_pct:Q", title="Laczny udzial top N (%)"),
             tooltip=[
                 "month",
@@ -563,7 +616,7 @@ def chart_share_change(profiles: pd.DataFrame) -> alt.Chart:
                 "is_outlier",
             ],
         )
-        .properties(width=700, height=360, title="EDA: share change 2011-2024 (outliers in red)")
+        .properties(width=700, height=360, title="EDA: share change 2011-2026 (outliers in red)")
     )
 
 
@@ -605,8 +658,12 @@ def chart_clusters(dim: pd.DataFrame, profiles: pd.DataFrame) -> alt.Chart:
 
 def write_dim_reduction_3d_html(viz_dir: Path) -> None:
     """Interaktywny wykres 3D (Plotly): obrot sceny, zoom scroll, przelacznik metody."""
-    import numpy as np
-    import plotly.graph_objects as go
+    try:
+        import numpy as np
+        import plotly.graph_objects as go
+    except ModuleNotFoundError:
+        print("Pomijam dim_reduction_3d.html (brak modulu plotly; pip install plotly).")
+        return
 
     if not PROCESSED_DIM_REDUCTION_3D.exists():
         print("Pomijam dim_reduction_3d.html (brak dim_reduction_3d.csv — uruchom dim_reduction.py).")
@@ -718,7 +775,7 @@ def write_index_html(viz_dir: Path) -> None:
         ("concentration.vl.json", "Koncentracja rynku", False),
         ("bump_chart.vl.json", "Ranking spolecznosci", False),
         ("community_comparison.vl.json", "Porownanie spolecznosci", False),
-        ("share_change.vl.json", "EDA: zmiana udzialu (2011-2024)", False),
+        ("share_change.vl.json", "EDA: zmiana udzialu (2011-2026)", False),
         ("pca_variance.vl.json", "EDA: wariancja PCA", False),
         ("clusters.vl.json", "EDA: klastrowanie (k-means)", False),
         (
@@ -977,7 +1034,7 @@ def write_index_html(viz_dir: Path) -> None:
 <body>
   <main class="page">
     <header class="page-header">
-      <h1>Ewolucja ekosystemow jezykow programowania</h1>
+      <h1>Ewolucja popularnosci jezykow programowania</h1>
     </header>
     {''.join(sections)}
   </main>

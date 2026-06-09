@@ -342,25 +342,47 @@ def render_html(payload: dict) -> str:
     }}
     .slideshow-row.slideshow-toolbar-line {{
       display: flex;
-      flex-wrap: wrap;
+      flex-wrap: nowrap;
       align-items: center;
       justify-content: center;
-      gap: 0.65rem 1rem;
+      gap: 0.5rem 0.65rem;
       width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
     }}
     .nav-cluster {{
       display: inline-flex;
-      flex-wrap: wrap;
+      flex-wrap: nowrap;
       align-items: center;
-      gap: 0.4rem 0.55rem;
+      gap: 0.35rem 0.5rem;
+      flex-shrink: 0;
+    }}
+    #periodSelect {{
+      max-width: 7.5rem;
+      min-width: 0;
+      flex-shrink: 1;
+    }}
+    .speed-cluster {{
+      flex-shrink: 0;
     }}
     .speed-cluster label {{
       display: inline-flex;
-      flex-wrap: wrap;
+      flex-wrap: nowrap;
       align-items: center;
-      gap: 0.3rem 0.55rem;
+      gap: 0.3rem 0.45rem;
       font-size: 0.9rem;
       color: #333;
+    }}
+    .speed-cluster input[type="range"] {{
+      width: 6.75rem;
+      max-width: 26vw;
+      flex-shrink: 0;
+    }}
+    .speed-val {{
+      font-variant-numeric: tabular-nums;
+      min-width: 4ch;
+      display: inline-block;
+      text-align: right;
     }}
     button.btn-play-icon {{
       min-width: 2.65rem;
@@ -394,7 +416,6 @@ def render_html(payload: dict) -> str:
       color: #fff;
       border-color: #1a56db;
     }}
-    .speed-step-hint {{ font-size: 0.8rem; color: #64748b; }}
   </style>
 </head>
 <body>
@@ -419,10 +440,9 @@ def render_html(payload: dict) -> str:
           </div>
           <div class="speed-cluster">
             <label>
-              Predkosc (ms)
-              <input type="range" id="speedRange" min="100" max="4000" step="50" value="300" />
-              <span id="speedVal">300</span>
-              <span class="speed-step-hint" id="speedStepHint"></span>
+              Predkosc (s)
+              <input type="range" id="speedRange" min="10" max="200" step="1" value="30" title="0.10 s do 2.00 s" />
+              <span id="speedVal" class="speed-val">0.30</span>
             </label>
           </div>
           <button type="button" id="btnPlay" class="btn-play-icon" title="Odtwarzaj" aria-label="Odtwarzaj slideshow"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 5v14l11-7z"/></svg></button>
@@ -553,13 +573,21 @@ def render_html(payload: dict) -> str:
       b.title = loopEnabled ? "Zapetlanie wlaczone" : "Zapetlanie wylaczone";
       b.setAttribute("aria-label", loopEnabled ? "Wylacz zapetlanie" : "Wlacz zapetlanie");
     }}
-    function syncSpeedStepHint() {{
-      const r = document.getElementById("speedRange");
-      const h = document.getElementById("speedStepHint");
-      if (r && h) h.textContent = "(krok " + r.step + " ms)";
+    function slideshowSecondsFromInput() {{
+      const v = speedRange ? parseInt(speedRange.value, 10) : 30;
+      return (Number.isFinite(v) ? v : 30) / 100;
+    }}
+    function slideshowIntervalMs() {{
+      return Math.round(slideshowSecondsFromInput() * 1000);
+    }}
+    function formatSlideshowSpeedLabel() {{
+      return slideshowSecondsFromInput().toFixed(2);
+    }}
+    function syncSpeedLabel() {{
+      if (speedVal) speedVal.textContent = formatSlideshowSpeedLabel();
     }}
     syncLoopButton();
-    syncSpeedStepHint();
+    syncSpeedLabel();
     syncPlayIcon(false);
 
     function currentPeriod() {{ return PERIODS[periodIndex]; }}
@@ -880,7 +908,7 @@ def render_html(payload: dict) -> str:
       if (gridMode) return;
       stopSlideshow();
       syncPlayIcon(true);
-      const ms = parseInt(speedRange.value, 10);
+      const ms = slideshowIntervalMs();
       timer = setInterval(() => {{
         if (periodIndex >= PERIODS.length - 1 && !loopEnabled) {{
           stopSlideshow();
@@ -921,8 +949,7 @@ def render_html(payload: dict) -> str:
     }});
     periodSelect.addEventListener("change", () => goPeriod(parseInt(periodSelect.value, 10), false));
     speedRange.addEventListener("input", () => {{
-      speedVal.textContent = speedRange.value;
-      syncSpeedStepHint();
+      syncSpeedLabel();
       if (timer) startSlideshow();
     }});
     document.getElementById("btnPlay").addEventListener("click", () => {{
