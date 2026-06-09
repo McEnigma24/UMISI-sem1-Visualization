@@ -773,7 +773,7 @@ def write_index_html(viz_dir: Path) -> None:
         ("trends_line.vl.json", "Trendy aktywnosci", False),
         ("shares_stacked.vl.json", "Udzialy w czasie", False),
         ("concentration.vl.json", "Koncentracja rynku", False),
-        ("bump_chart.vl.json", "Ranking spolecznosci", False),
+        # ("bump_chart.vl.json", "Ranking spolecznosci", False),  # tymczasowo ukryte
         ("community_comparison.vl.json", "Porownanie spolecznosci", False),
         ("share_change.vl.json", "EDA: zmiana udzialu (2011-2026)", False),
         ("pca_variance.vl.json", "EDA: wariancja PCA", False),
@@ -1183,7 +1183,7 @@ def main() -> None:
     quarterly.to_csv(DATA_PROCESSED / "quarterly_shares.csv", index=False)
 
     _save_chart(chart_concentration(shares), VIZ_DIR / "concentration.vl.json")
-    _save_chart(chart_bump(community), VIZ_DIR / "bump_chart.vl.json")
+    # _save_chart(chart_bump(community), VIZ_DIR / "bump_chart.vl.json")  # tymczasowo ukryte
     _save_chart(chart_community(community), VIZ_DIR / "community_comparison.vl.json")
     _save_chart(chart_share_change(profiles), VIZ_DIR / "share_change.vl.json")
     _save_chart(chart_pca_variance(variance), VIZ_DIR / "pca_variance.vl.json")
