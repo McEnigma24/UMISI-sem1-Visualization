@@ -1,0 +1,139 @@
+Neural Network Hidden Layers Activation Embedding
+In today's laboratory, we will use a fully connected neural network for a classification task to improve visualization algorithms from previous classes.
+
+Introduction
+In a fully connected neural network, the output of each layer is computed using the activations from the previous one. During the neural network training process, each successive layer learns to extract features from data with increasingly higher levels of abstraction.
+
+In this exercise, instead of directly visualizing data, we'll try to visualize the activation of hidden layers in neural networks. Using this idea, we can improve the process of data visualization, and on the other hand, see how the neural network processes this data.
+
+
+Setting Up the Neural Network
+In the first stage, we define a simple architecture of the neural network and train it to recognize digits in the MNIST dataset.
+
+
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import matplotlib.animation
+from keras.models import Sequential
+from keras.layers.core import Dense, Dropout
+from keras.optimizers import SGD
+from keras import backend as K
+
+from keras.datasets import mnist
+from keras.utils import np_utils
+from sklearn.model_selection import train_test_split
+
+%matplotlib inline
+plt.rcParams["animation.html"] = "jshtml"
+
+nb_classes = 10
+The dropout layers have the very specific function to drop out a random set of activations in that layer by setting them to zero in the forward pass. This allows the model to avoid overfitting but should only be used at training time, not at test time.
+
+# Set dropout rate - fractions of neurons to drop
+dropout = 0.5
+
+# Build very simple neural network with 2 hidden layers
+model = Sequential()
+model.add(Dense(256, activation='relu', input_shape=(784,)))
+model.add(Dropout(dropout))
+model.add(Dense(64, activation='relu'))
+model.add(Dropout(dropout))
+model.add(Dense(nb_classes, activation='softmax'))
+
+model.compile(loss='categorical_crossentropy', optimizer='adam',
+              metrics=['accuracy'])
+
+
+Preparing the Data
+The binary_crossentropy loss expects a one-hot-vector as input,so we apply the to_categorical function from keras.utils to convert integer labels to one-hot-vectors.
+
+(X_train, y_train), (X_test, y_test) = mnist.load_data()
+
+X_train = X_train.reshape(60000, 784)
+X_test = X_test.reshape(10000, 784)
+X_train = X_train.astype("float32")
+X_test = X_test.astype("float32")
+
+# Put everything on grayscale
+X_train /= 255
+X_test /= 255
+
+# Convert class vectors to binary class matrices
+Y_train = np_utils.to_categorical(y_train, 10)
+Y_test = np_utils.to_categorical(y_test, 10)
+
+# Split training and validation data
+X_train, X_val, Y_train, Y_val = train_test_split(X_train, Y_train, train_size=5/6)
+Let's visualize an example digit:
+
+# Show example digit
+plt.imshow(X_train[0].reshape(28, 28))
+
+
+
+
+Training the Model
+When we have defined and compiled the model, it can be trained using the fit function.
+
+We also use validation dataset to monitor validation loss and accuracy.
+
+
+network_history = model.fit(X_train, Y_train, batch_size=128,
+                           epochs=20, verbose=1, validation_data=(X_val, Y_val))
+We can visualize the training history:
+
+def plot_history(network_history):
+    plt.figure()
+    plt.xlabel('Epochs')
+    plt.ylabel('Loss')
+    plt.plot(network_history.history['loss'])
+    plt.plot(network_history.history['val_loss'])
+    plt.legend(['Training', 'Validation'])
+
+    plt.figure()
+    plt.xlabel('Epochs')
+    plt.ylabel('Accuracy')
+    plt.plot(network_history.history['accuracy'])
+    plt.plot(network_history.history['val_accuracy'])
+    plt.legend(['Training', 'Validation'], loc='lower right')
+    plt.show()
+
+The fit function returns a keras.callbacks.History object which contains the entire history of training/validation loss, accuracy and other metrics for each epoch.
+
+We can therefore plot the behavior of loss and accuracy during the training phase.
+
+
+plot_history(network_history)
+
+
+
+Extracting Hidden Layer Activations
+Keras Model has the summary function that prints data about model architecture
+
+model.summary()
+We are interested in downloading the activation of hidden layers, because the dropout layers are between them,
+
+we need to properly select the index of the three dense layers.
+
+get_layer_output = K.function([model.layers[0].input, model.layers[0].input, model.layers[0].input],
+                              [model.layers[0].output, model.layers[2].output, model.layers[4].output])
+
+layer1_output, layer2_output, layer3_output = get_layer_output([X_train])
+
+train_ids = [np.arange(len(Y_train))[Y_train[:,i] == 1] for i in range(10)]
+
+Visualizing Network Activations
+The 2 visualizations below show how neuron activations work:
+
+First animation shows what an example digit (number 5) looks like and what activations of neurons look like in hidden layers of the neural network.
+
+Second animation checks the similarity in behavior for frames showing the same digit by looking at the ensemble properties. In this case, ensemble properties refers to how the neurons behave on average for a large number of frames showing the same digit.
+
+After summing up the responses of as few as 20-30 frames, the pattern in the second hidden layer is almost static. After combining about 70-80 frames, the pattern in the first hidden layer also appears static. This supports the idea that only a subset of all neurons is involved in the recognition of individual digits.
+
+This observation is important when we think about using neural networks for data visualization. We can clearly see that the activations generated by examples belonging to the same class are less chaotic than the examples themselves; therefore, their visualization should give a more clustered structure.
+
+
+
+
